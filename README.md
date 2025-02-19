@@ -1,4 +1,4 @@
-# CM-potfolio
+# CM-portfolio
 
 :)
 
