@@ -1,6 +1,95 @@
 ---
 title: "Computational Musicology Portfolio"
 name: "Sven"
-output: html_document
+output: 
+  flexdashboard::flex_dashboard
 ---
+
+```{r load packages, include=FALSE}
+library(flexdashboard)
+library(plotly)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+library(DT)
+```
+
+``` {r load data frame, include=FALSE}
+compmus2025 <- read_csv("/Users/svennome/CM-potfolio/compmus2025_wnames.csv")
+```
+
+```{r create danceability table, include=FALSE}
+compmus2025_dance <- 
+  compmus2025 %>%
+    group_by(Names) %>%
+    summarize(meanDanceability = mean(danceability))
+```
+
+
+Tables
+=======================================================
+
+Column 1 
+---------------------------------------------------
+### Compmus2025 Table
+
+```{r friendly table}
+datatable(compmus2025, rownames = FALSE, options = list(pageLength = 13))
+```
+
+> This table shows a diverse range of information about the tracks. Besides the *filenames*, it displayes the *approachability*, *arousal*, *danceability*, *engagingness*, *instrumentalness*, *tempo*, *valence* and the *names* of the students.The information in this table will be the base for my first visualisation.
+
+
+Column 2
+----------------------------------------------------
+### Mean Danceability Table
+
+```{r friendly table dance}
+datatable(compmus2025_dance, rownames = FALSE, options = list(pageLength = 16))
+```
+
+> This table shows the mean of the *danceability* of both tracks for each student.The information in this table will be the base for my first visualisation.
+
+
+Visualisations {.storyboard}
+==========================================================
+### Comparison of all songs
+
+```{r}
+Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6)
+
+ggplotly(Comparison_gg)
+```
+
+***
+This graph shows the relationship between the *danceability* and *arousal*. Especially at the beginning of the graph, it seems like there is a correlation: when *danceability* rises, so does *arousal*. Combining this with *engagingness*, which is shown by the size of the dots, it can be seen that when *danceability* and *arousal* rise, there is often also an increase in *engagingness*. 
+
+***
+Lastly *valence* is added to the graph as the colour of the dots. It can be seen that often *valence* and *engagingness* increase together. However, at certain moments, the relationship between *valence* and *engagingness* is less apparent. 
+
+### Whose song is the most danceable?
+
+```{r}
+Dance_gg <- ggplot(compmus2025_dance, aes(x = Names, y = meanDanceability)) + geom_col() +
+ theme(axis.text.x = element_text(angle = 45))
+
+ggplotly(Dance_gg)
+```
+
+***
+In this graph, the mean of *danceability* of the two tracks of each person is shown. It can be seen that the rate of *danceability* is very diverse: Roemer made the most danceable tracks with a mean of 0.9997242 as score and Erik made the least danceable tracks with 0.1242007 as score. 
+
+
+Conclusion and Discussion
+==================================================================
+### Own tracks in compmus2025
+
+**AI Prompts:**
+For the first track, I used https://www.jenmusic.ai to create it and provided it with the following prompt: “I would like a 6/8 meter, often stressing this meter, but at certain moments provided with hemiolas. It should be a ballad, structured as: intro - verse - pre-chorus - chorus - break - verse - chorus - chorus - outro. As instruments, it should use a piano, soft percussion, a string quartet and some woodwinds. The piano provides a progression consisting of chords with additional notes (such as 7ths, 9ths, 11ths, 13ths) and sus-chords. The soft percussion starts minimal, but gets more extensive in the choruses. The strings play throughout the whole song, but the viola mainly provides the melody. The woodwinds are only used to emphasize the pre-chorus and the chorus. The ballad should be in D major as key and has a slow to medium tempo. The reverb should be as if the piece is played in a small hall.” I tried to be specific in many aspects to see if the AI tool would create something that would meet my ‘demands’. Even though it did not in many ways, it picked up on some features of the prompt.
+
+For the second track, I used https://www.stableaudio.com to create it and provided it with the following prompt: “soft ballad, 6/8, D major, slow to medium tempo, piano, soft percussion gets more extensive over-time, string quartet, melody played by viola, soft woodwinds, triad chords played by piano, added note chords played by piano, hemiolas, small hall reverb.” This tool specified that it would work better when using short descriptions, so I tried to recreate the prompt I used for track one as much as I could with this in mind. Some ‘demands’ are now less elaborate or not mentioned at all. Again, it does seem to leave out some ‘demands’, but many others are to some extent met.
+
+***
+**Own tracks:**
+My own tracks are low in *danceability* and *arousal*, but in the middle on the scale of *engagingness* and *valence*. Compared to all the other tracks, my tracks are in the lower spectrum of each category. I find it interesting how Essentia labelled the *tempo* of my tracks as 112 and 124 respectively, when I asked the AI models to generate slow (to medium) tempo music. 
 
