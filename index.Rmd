@@ -12,6 +12,11 @@ library(ggplot2)
 library(tidyverse)
 library(readr)
 library(DT)
+library(rjson)
+```
+
+```{r load source}
+source("compmus.R")
 ```
 
 ``` {r load data frame, include=FALSE}
@@ -23,6 +28,83 @@ compmus2025_dance <-
   compmus2025 %>%
     group_by(Names) %>%
     summarize(meanDanceability = mean(danceability))
+```
+
+SSM {.storyboard}
+===========================================================
+
+### Chromagram Track 1
+
+``` {r create chromagram 1}
+"features/sven-n-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C#|Db", "D", "D#|Eb",
+                "E", "F", "F#|Gb", "G",
+                "G#|Ab", "A", "A#|Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram Track 1
+
+``` {r create cepstrogram 1}
+"features/asven-n-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+### Chromagram Track 2
+
+``` {r create chromagram 2}
+"features/sven-n-2.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C#|Db", "D", "D#|Eb",
+                "E", "F", "F#|Gb", "G",
+                "G#|Ab", "A", "A#|Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram Track 2
+
+``` {r create cepstrogram 2}
+"features/asven-n-2.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
 ```
 
 
@@ -56,7 +138,7 @@ Visualisations {.storyboard}
 ### Comparison of all songs
 
 ```{r}
-Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6)
+Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6) 
 
 ggplotly(Comparison_gg)
 ```
