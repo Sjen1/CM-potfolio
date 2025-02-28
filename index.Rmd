@@ -30,47 +30,13 @@ compmus2025_dance <-
     summarize(meanDanceability = mean(danceability))
 ```
 
-SSM {.storyboard}
+
+(Sven's) Track 2 Visualisations 
 ===========================================================
 
-### Chromagram Track 1
-
-``` {r create chromagram 1}
-"features/sven-n-1.json" |>            
-  compmus_chroma(norm = "identity") |>  
-  ggplot(aes(x = time, y = pc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:11,
-    minor_breaks = NULL,
-    labels = c(
-                "C", "C#|Db", "D", "D#|Eb",
-                "E", "F", "F#|Gb", "G",
-                "G#|Ab", "A", "A#|Bb", "B"
-              )
-  ) +
-  scale_fill_viridis_c(guide = "none") +  
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()                           
-```
-
-### Cepstrogram Track 1
-
-``` {r create cepstrogram 1}
-"features/asven-n-1.json" |>              
-  compmus_mfccs(norm = "identity") |>       
-  ggplot(aes(x = time, y = mfcc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:12,
-    minor_breaks = NULL,
-  ) +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
-  theme_classic()   
-```
-
-### Chromagram Track 2
+Chromagram and Cepstrogram
+-----------------------------------------------------------------------------------------
+### Chromagram
 
 ``` {r create chromagram 2}
 "features/sven-n-2.json" |>            
@@ -91,10 +57,10 @@ SSM {.storyboard}
   theme_classic()                           
 ```
 
-### Cepstrogram Track 2
+### Cepstrogram
 
 ``` {r create cepstrogram 2}
-"features/asven-n-2.json" |>              
+"features/sven-n-2.json" |>              
   compmus_mfccs(norm = "identity") |>       
   ggplot(aes(x = time, y = mfcc, fill = value)) + 
   geom_raster() +
@@ -105,6 +71,125 @@ SSM {.storyboard}
   scale_fill_viridis_c(guide = "none") +        
   labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
   theme_classic()   
+```
+
+### Comments
+Track two seems somewhat structured in the *chroma-based matrics*, but also in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is an A1-B-A2-?A3? structure. However the structure in the *timbre-based matrice* is harder to point out, because it seems to change a lot.
+
+
+Self-similarity Matrices
+--------------------------------------------------------------
+### Chroma-based Matrice
+
+```{r create chroma ssm 2}
+"features/sven-n-2.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrice
+
+```{r create timbre ssm 2}
+"features/sven-n-2.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic() 
+```
+
+
+(Sven's) Track 1 Visualisations 
+===========================================================
+
+Chromagram and Cepstrogram
+-----------------------------------------------------------------------------------------
+### Chromagram
+
+``` {r create chromagram 1}
+"features/sven-n-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C#|Db", "D", "D#|Eb",
+                "E", "F", "F#|Gb", "G",
+                "G#|Ab", "A", "A#|Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+
+``` {r create cepstrogram 1}
+"features/sven-n-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+### Comments
+Track one seems not-so structured in the *chroma-based matrics*, but a little more in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is hardly and structure present, it seems to change the whole time. However the structure in the *timbre-based matrice* seems to be some A-B-C structure, in which the timbre changes a bit between each section. The biggest change, however, occurs between section B and C.
+
+
+Self-similarity Matrices
+--------------------------------------------------------------
+### Chroma-based Matrice
+
+```{r create chroma ssm 1}
+"features/sven-n-1.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrice
+
+```{r create timbre ssm 1}
+"features/sven-n-1.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic() 
 ```
 
 
