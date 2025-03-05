@@ -352,11 +352,11 @@ key_templates <-
   )
 ```
 
-``` {r create chordogram 1}
+``` {r create keyogram 1}
 "features/sven-n-1.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
-    chord_templates,  
+    key_templates,  
     norm = "chebyshev",  
     distance = "cosine" 
   ) |>
@@ -366,6 +366,58 @@ key_templates <-
   labs(x = "Time (s)", y = "Template", fill = NULL) +
   theme_classic()
 ```
+
+``` {r create keyogram 2}
+"features/sven-n-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    key_templates,  
+    norm = "chebyshev",  
+    distance = "cosine" 
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  theme_classic()
+```
+
+``` {r create chordogram 1}
+"features/sven-n-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "chebyshev",  
+    distance = "manhattan" 
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  theme_classic()
+```
+
+
+``` {r create chordogram 2}
+"features/sven-n-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "chebyshev",  
+    distance = "manhattan" 
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  theme_classic()
+```
+
+
+
+
+
+
 
 
 
