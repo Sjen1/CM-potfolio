@@ -31,244 +31,10 @@ compmus2025_dance <-
 ```
 
 
-(Sven's) Track 2 Visualisations 
-===========================================================
+Key- & Chordograms's for my own tracks 
+=================================================================================
 
-Chromagram and Cepstrogram
------------------------------------------------------------------------------------------
-### Chromagram
-
-``` {r create chromagram 2}
-"features/sven-n-2.json" |>            
-  compmus_chroma(norm = "identity") |>  
-  ggplot(aes(x = time, y = pc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:11,
-    minor_breaks = NULL,
-    labels = c(
-                "C", "C#|Db", "D", "D#|Eb",
-                "E", "F", "F#|Gb", "G",
-                "G#|Ab", "A", "A#|Bb", "B"
-              )
-  ) +
-  scale_fill_viridis_c(guide = "none") +  
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()                           
-```
-
-### Cepstrogram
-
-``` {r create cepstrogram 2}
-"features/sven-n-2.json" |>              
-  compmus_mfccs(norm = "identity") |>       
-  ggplot(aes(x = time, y = mfcc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:12,
-    minor_breaks = NULL,
-  ) +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
-  theme_classic()   
-```
-
-### Comments
-Track two seems somewhat structured in the *chroma-based matrics*, but also in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is an A1-B-A2-?A3? structure. However the structure in the *timbre-based matrice* is harder to point out, because it seems to change a lot.
-
-
-Self-similarity Matrices
---------------------------------------------------------------
-### Chroma-based Matrice
-
-```{r create chroma ssm 2}
-"features/sven-n-2.json" |>          
-  compmus_chroma(norm = "chebyshev") |>        
-  compmus_self_similarity(
-    feature = pc,
-    distance = "manhattan"                  
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()      
-```
-
-### Timbre-based Matrice
-
-```{r create timbre ssm 2}
-"features/sven-n-2.json" |>                  
-  compmus_mfccs(norm = "euclidean") |>       
-  compmus_self_similarity(
-    feature = mfcc,
-    distance = "euclidean"              
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic() 
-```
-
-
-(Sven's) Track 1 Visualisations 
-===========================================================
-
-Chromagram and Cepstrogram
------------------------------------------------------------------------------------------
-### Chromagram
-
-``` {r create chromagram 1}
-"features/sven-n-1.json" |>            
-  compmus_chroma(norm = "identity") |>  
-  ggplot(aes(x = time, y = pc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:11,
-    minor_breaks = NULL,
-    labels = c(
-                "C", "C#|Db", "D", "D#|Eb",
-                "E", "F", "F#|Gb", "G",
-                "G#|Ab", "A", "A#|Bb", "B"
-              )
-  ) +
-  scale_fill_viridis_c(guide = "none") +  
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()                           
-```
-
-### Cepstrogram
-
-``` {r create cepstrogram 1}
-"features/sven-n-1.json" |>              
-  compmus_mfccs(norm = "identity") |>       
-  ggplot(aes(x = time, y = mfcc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:12,
-    minor_breaks = NULL,
-  ) +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
-  theme_classic()   
-```
-
-### Comments
-Track one seems not-so structured in the *chroma-based matrics*, but a little more in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is hardly and structure present, it seems to change the whole time. However the structure in the *timbre-based matrice* seems to be some A-B-C structure, in which the timbre changes a bit between each section. The biggest change, however, occurs between section B and C.
-
-
-Self-similarity Matrices
---------------------------------------------------------------
-### Chroma-based Matrice
-
-```{r create chroma ssm 1}
-"features/sven-n-1.json" |>          
-  compmus_chroma(norm = "chebyshev") |>        
-  compmus_self_similarity(
-    feature = pc,
-    distance = "manhattan"                  
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()      
-```
-
-### Timbre-based Matrice
-
-```{r create timbre ssm 1}
-"features/sven-n-1.json" |>                  
-  compmus_mfccs(norm = "euclidean") |>       
-  compmus_self_similarity(
-    feature = mfcc,
-    distance = "euclidean"              
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic() 
-```
-
-
-Tables
-=======================================================
-
-Column 1 
----------------------------------------------------
-### Compmus2025 Table
-
-```{r friendly table}
-datatable(compmus2025, rownames = FALSE, options = list(pageLength = 13))
-```
-
-> This table shows a diverse range of information about the tracks. Besides the *filenames*, it displayes the *approachability*, *arousal*, *danceability*, *engagingness*, *instrumentalness*, *tempo*, *valence* and the *names* of the students.The information in this table will be the base for my first visualisation.
-
-
-Column 2
-----------------------------------------------------
-### Mean Danceability Table
-
-```{r friendly table dance}
-datatable(compmus2025_dance, rownames = FALSE, options = list(pageLength = 16))
-```
-
-> This table shows the mean of the *danceability* of both tracks for each student.The information in this table will be the base for my first visualisation.
-
-
-Visualisations {.storyboard}
-==========================================================
-### Comparison of all songs
-
-```{r}
-Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6) 
-
-ggplotly(Comparison_gg)
-```
-
-***
-This graph shows the relationship between the *danceability* and *arousal*. Especially at the beginning of the graph, it seems like there is a correlation: when *danceability* rises, so does *arousal*. Combining this with *engagingness*, which is shown by the size of the dots, it can be seen that when *danceability* and *arousal* rise, there is often also an increase in *engagingness*. 
-
-***
-Lastly *valence* is added to the graph as the colour of the dots. It can be seen that often *valence* and *engagingness* increase together. However, at certain moments, the relationship between *valence* and *engagingness* is less apparent. 
-
-### Whose song is the most danceable?
-
-```{r}
-Dance_gg <- ggplot(compmus2025_dance, aes(x = Names, y = meanDanceability)) + geom_col() +
- theme(axis.text.x = element_text(angle = 45))
-
-ggplotly(Dance_gg)
-```
-
-***
-In this graph, the mean of *danceability* of the two tracks of each person is shown. It can be seen that the rate of *danceability* is very diverse: Roemer made the most danceable tracks with a mean of 0.9997242 as score and Erik made the least danceable tracks with 0.1242007 as score. 
-
-
-Conclusion and Discussion
-==================================================================
-### Own tracks in compmus2025
-
-**AI Prompts:**
-For the first track, I used https://www.jenmusic.ai to create it and provided it with the following prompt: “I would like a 6/8 meter, often stressing this meter, but at certain moments provided with hemiolas. It should be a ballad, structured as: intro - verse - pre-chorus - chorus - break - verse - chorus - chorus - outro. As instruments, it should use a piano, soft percussion, a string quartet and some woodwinds. The piano provides a progression consisting of chords with additional notes (such as 7ths, 9ths, 11ths, 13ths) and sus-chords. The soft percussion starts minimal, but gets more extensive in the choruses. The strings play throughout the whole song, but the viola mainly provides the melody. The woodwinds are only used to emphasize the pre-chorus and the chorus. The ballad should be in D major as key and has a slow to medium tempo. The reverb should be as if the piece is played in a small hall.” I tried to be specific in many aspects to see if the AI tool would create something that would meet my ‘demands’. Even though it did not in many ways, it picked up on some features of the prompt.
-
-For the second track, I used https://www.stableaudio.com to create it and provided it with the following prompt: “soft ballad, 6/8, D major, slow to medium tempo, piano, soft percussion gets more extensive over-time, string quartet, melody played by viola, soft woodwinds, triad chords played by piano, added note chords played by piano, hemiolas, small hall reverb.” This tool specified that it would work better when using short descriptions, so I tried to recreate the prompt I used for track one as much as I could with this in mind. Some ‘demands’ are now less elaborate or not mentioned at all. Again, it does seem to leave out some ‘demands’, but many others are to some extent met.
-
-***
-**Own tracks:**
-My own tracks are low in *danceability* and *arousal*, but in the middle on the scale of *engagingness* and *valence*. Compared to all the other tracks, my tracks are in the lower spectrum of each category. I find it interesting how Essentia labelled the *tempo* of my tracks as 112 and 124 respectively, when I asked the AI models to generate slow (to medium) tempo music. 
-
-
-(Sven's) Track 1 chordograms
-===========================================================
-
-chordograms
------------------------------------------------------------------------------------------
-### chordogram
-
-```{r load chord and key information, include+FALSE}
+```{r load chord and key information, include=FALSE}
 #      C     C#    D     Eb    E     F     F#    G     Ab    A     Bb    B
 major_chord <-
   c(   1,    0,    0,    0,    1,    0,    0,    1,    0,    0,    0,    0)
@@ -352,13 +118,17 @@ key_templates <-
   )
 ```
 
-``` {r create keyogram 1}
+Track 1 grams {.tabset}
+-----------------------------------------------------------------------------------------
+### Keygram Track 1
+
+``` {r create keygram 1}
 "features/sven-n-1.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
     key_templates,  
-    norm = "chebyshev",  
-    distance = "cosine" 
+    norm = "euclidean",  
+    distance = "manhattan"
   ) |>
   ggplot(aes(x = time, y = name, fill = d)) + 
   geom_raster() +
@@ -367,27 +137,42 @@ key_templates <-
   theme_classic()
 ```
 
-``` {r create keyogram 2}
-"features/sven-n-2.json" |> 
-  compmus_chroma(norm = "chebyshev") |> 
-  compmus_match_pitch_templates(
-    key_templates,  
-    norm = "chebyshev",  
-    distance = "cosine" 
-  ) |>
-  ggplot(aes(x = time, y = name, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = "Template", fill = NULL) +
-  theme_classic()
-```
+### Chordogram Track 1
 
 ``` {r create chordogram 1}
 "features/sven-n-1.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
     chord_templates,  
-    norm = "chebyshev",  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  theme_classic()
+```
+
+### Comments Track 1
+
+In the prompts I asked the AI music generators to compose a piece in **D major**. Looking at the keygram of track 1, the darkest lines correspond to the keys of *D major*, *D minor* and *A major*. *D minor* is the parallel minor of *D major*. Because of the centricity of the tone *D* within both scales, it is not odd that *D minor* seems prominent in the keygram. The prominence of *A major* can also be explained, because of its neighboring position to *D major* in the circle of fifths. The two keys have six corresponding notes and the tone *A* (as well as the A major chord) has an important function as dominant in the scale of *D major*. 
+
+***
+
+Looking at the chordogram of track 1, the darkest spots appear at the following chords: *D major*, *A major*, *G major*, *B minor* and *F# minor*. These are the tonic, dominant,  subdominant, submediant and mediant of the **D major** scale respectively. The chords are, thus, all diatonic chords and their appearance in the piece are not surprising. Two other remarkable lines are those of *D minor* and *G minor*. These two chords appear in the *D minor* scale, which explains - together with the understanding that this is the parallel minor of *D major* - why they appear in the chordogram as well.
+
+
+Track 2 grams {.tabset}
+------------------------------------------------------------------
+### Keygram Track 2
+
+``` {r create keygram 2}
+"features/sven-n-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    key_templates,  
+    norm = "euclidean",  
     distance = "manhattan" 
   ) |>
   ggplot(aes(x = time, y = name, fill = d)) + 
@@ -397,13 +182,14 @@ key_templates <-
   theme_classic()
 ```
 
+### Chordogram Track 2
 
 ``` {r create chordogram 2}
 "features/sven-n-2.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
     chord_templates,  
-    norm = "chebyshev",  
+    norm = "euclidean",  
     distance = "manhattan" 
   ) |>
   ggplot(aes(x = time, y = name, fill = d)) + 
@@ -412,6 +198,244 @@ key_templates <-
   labs(x = "Time (s)", y = "Template", fill = NULL) +
   theme_classic()
 ```
+
+### Comments Track 2
+
+In the prompts I asked the AI music generators to compose a piece in **D major**. Other than track 1, track 2 does not seem to be in *D major*. The *D major* line is light and instead the lines of *C major* and *A major* seem to be the darkest and, thus, the most prominent. However, another line that is remarkable is that of *A minor*, which is not the darkest, but it is on the darker side throughout the whole track. Between 50-100s more importance seems to be given to *C major* and between 110-160s this seems to shift to *A major*. *A minor* can in this sense be seen as the bridge between both scales: *C major* is its relative major key and *A major* is its parallel major key. Although the track is not in *D major*, the other three scales seem to work together (through modulation) to create the tonal space in this track. 
+
+***
+
+Looking at the chordogram of track 2, the chord progression seems to show modulations as well. 0-50s puts the most emphasis on the *A minor* chord. *A major* and *A7* is also apparent, likely because of the centricity of the tone *A*. 50-110s shows a shift to the *C major*, *C minor*, *F minor* chords (perhaps then not a shift to the key of *C major*, but to the key of *C minor*?), in which the *A major* line suddenly gets very bright compared to the former section (the chord is unlikely to appear in this section). 110-130s shows a shift again, emphasizing the chords of *A major* , *A minor*, *F minor* and *D minor* - a seemingly combination of the *A major* and *A minor* key. After 130s, the *F minor* chord dissapears again, which puts a bigger emphasis on the *A minor* and *D minor* chords. With these chords, the track seems to end in the **A minor** key.
+
+
+Track 1 {data-navmenu="SSMs for my own tracks"} 
+==================================================================================
+
+Chromagram and Cepstrogram
+-----------------------------------------------------------------------------------------
+### Chromagram
+
+``` {r create chromagram 2}
+"features/sven-n-2.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C#|Db", "D", "D#|Eb",
+                "E", "F", "F#|Gb", "G",
+                "G#|Ab", "A", "A#|Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+
+``` {r create cepstrogram 2}
+"features/sven-n-2.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+### Comments
+Track two seems somewhat structured in the *chroma-based matrics*, but also in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is an A1-B-A2-?A3? structure. However the structure in the *timbre-based matrice* is harder to point out, because it seems to change a lot.
+
+
+Self-similarity Matrices
+-------------------------------------------------------------------------------
+### Chroma-based Matrice
+
+```{r create chroma ssm 2}
+"features/sven-n-2.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrice
+
+```{r create timbre ssm 2}
+"features/sven-n-2.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic() 
+```
+
+
+Track 2 {data-navmenu="SSMs for my own tracks"} 
+===================================================================================
+
+Chromagram and Cepstrogram
+-----------------------------------------------------------------------------------------
+### Chromagram
+
+``` {r create chromagram 1}
+"features/sven-n-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C#|Db", "D", "D#|Eb",
+                "E", "F", "F#|Gb", "G",
+                "G#|Ab", "A", "A#|Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+
+``` {r create cepstrogram 1}
+"features/sven-n-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+### Comments
+Track one seems not-so structured in the *chroma-based matrics*, but a little more in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is hardly and structure present, it seems to change the whole time. However the structure in the *timbre-based matrice* seems to be some A-B-C structure, in which the timbre changes a bit between each section. The biggest change, however, occurs between section B and C.
+
+
+Self-similarity Matrices
+---------------------------------------------------------------------------------
+### Chroma-based Matrice
+
+```{r create chroma ssm 1}
+"features/sven-n-1.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrice
+
+```{r create timbre ssm 1}
+"features/sven-n-1.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = NULL, fill = NULL) +
+  theme_classic() 
+```
+
+
+Tables class corpus
+==================================================================================
+
+Column 1 
+----------------------------------------------------------------------------------
+### Compmus2025 Table
+
+```{r friendly table}
+datatable(compmus2025, rownames = FALSE, options = list(pageLength = 13))
+```
+
+> This table shows a diverse range of information about the tracks. Besides the *filenames*, it displayes the *approachability*, *arousal*, *danceability*, *engagingness*, *instrumentalness*, *tempo*, *valence* and the *names* of the students.The information in this table will be the base for my first visualisation.
+
+
+Column 2
+---------------------------------------------------------------------------------
+### Mean Danceability Table
+
+```{r friendly table dance}
+datatable(compmus2025_dance, rownames = FALSE, options = list(pageLength = 16))
+```
+
+> This table shows the mean of the *danceability* of both tracks for each student.The information in this table will be the base for my first visualisation.
+
+
+Class corpus visualisations {.storyboard}
+=====================================================================================
+### Comparison of all songs
+
+```{r}
+Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6) 
+
+ggplotly(Comparison_gg)
+```
+
+***
+This graph shows the relationship between the *danceability* and *arousal*. Especially at the beginning of the graph, it seems like there is a correlation: when *danceability* rises, so does *arousal*. Combining this with *engagingness*, which is shown by the size of the dots, it can be seen that when *danceability* and *arousal* rise, there is often also an increase in *engagingness*. 
+
+***
+Lastly *valence* is added to the graph as the colour of the dots. It can be seen that often *valence* and *engagingness* increase together. However, at certain moments, the relationship between *valence* and *engagingness* is less apparent. 
+
+### Whose song is the most danceable?
+
+```{r}
+Dance_gg <- ggplot(compmus2025_dance, aes(x = Names, y = meanDanceability)) + geom_col() +
+ theme(axis.text.x = element_text(angle = 45))
+
+ggplotly(Dance_gg)
+```
+
+***
+In this graph, the mean of *danceability* of the two tracks of each person is shown. It can be seen that the rate of *danceability* is very diverse: Roemer made the most danceable tracks with a mean of 0.9997242 as score and Erik made the least danceable tracks with 0.1242007 as score. 
+
+
+Conclusion and Discussion
+==================================================================
+### Own tracks in compmus2025
+
+**AI Prompts:**
+For the first track, I used https://www.jenmusic.ai to create it and provided it with the following prompt: “I would like a 6/8 meter, often stressing this meter, but at certain moments provided with hemiolas. It should be a ballad, structured as: intro - verse - pre-chorus - chorus - break - verse - chorus - chorus - outro. As instruments, it should use a piano, soft percussion, a string quartet and some woodwinds. The piano provides a progression consisting of chords with additional notes (such as 7ths, 9ths, 11ths, 13ths) and sus-chords. The soft percussion starts minimal, but gets more extensive in the choruses. The strings play throughout the whole song, but the viola mainly provides the melody. The woodwinds are only used to emphasize the pre-chorus and the chorus. The ballad should be in D major as key and has a slow to medium tempo. The reverb should be as if the piece is played in a small hall.” I tried to be specific in many aspects to see if the AI tool would create something that would meet my ‘demands’. Even though it did not in many ways, it picked up on some features of the prompt.
+
+For the second track, I used https://www.stableaudio.com to create it and provided it with the following prompt: “soft ballad, 6/8, D major, slow to medium tempo, piano, soft percussion gets more extensive over-time, string quartet, melody played by viola, soft woodwinds, triad chords played by piano, added note chords played by piano, hemiolas, small hall reverb.” This tool specified that it would work better when using short descriptions, so I tried to recreate the prompt I used for track one as much as I could with this in mind. Some ‘demands’ are now less elaborate or not mentioned at all. Again, it does seem to leave out some ‘demands’, but many others are to some extent met.
+
+***
+**Own tracks:**
+My own tracks are low in *danceability* and *arousal*, but in the middle on the scale of *engagingness* and *valence*. Compared to all the other tracks, my tracks are in the lower spectrum of each category. I find it interesting how Essentia labelled the *tempo* of my tracks as 112 and 124 respectively, when I asked the AI models to generate slow (to medium) tempo music. 
 
 
 
