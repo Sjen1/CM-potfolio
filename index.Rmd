@@ -31,7 +31,7 @@ compmus2025_dance <-
 ```
 
 
-Key- & Chordograms's for my own tracks 
+Key- & Chordograms for my own tracks 
 =================================================================================
 
 ```{r load chord and key information, include=FALSE}
