@@ -31,6 +31,124 @@ compmus2025_dance <-
 ```
 
 
+Track 1 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+
+Novelty functions
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+
+``` {r energy-based novelty function track 1}
+"features/sven-n-1.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+
+``` {r spectral novelty function track 1}
+"features/sven-n-1.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+### Comments
+The *tempogram* of my first track shows very clear lines around 160 BMP, 320 BPM and 480 BPM. The *cyclic tempogram* shows very clear lines around 80 BPM and 160 BPM. Besides this, there is a somewhat vaguer line around 120 BPM. If I tap along with the music, I tap around **160 BPM**, so that would be an accurate estimate. In that case, 330 BPM and 500 BPM would be *tempo upper harmonics* and 80 BPM would be a *tempo subharmonic*. 120 BPM could be seen as a *tempo lower fourth* in relation to 180 BPM.
+
+In the high-level corpus features, the tempo of this track is presented as 112 BPM, which is interestingly enough not that accurate.  
+
+Tempograms
+----------------------------------------------------------------------------------
+### Tempogram
+
+``` {r tempo gram track 1}
+"features/sven-n-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+
+``` {r cyclic tempogram track 1}
+"features/sven-n-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+
+Track 2 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+
+Novelty functions
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+
+``` {r energy-based novelty function track 2}
+"features/sven-n-2.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+
+``` {r spectral novelty function track 2}
+"features/sven-n-2.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+### Comments
+The *tempogram* of my second track shows very clear lines around 180 BMP, 360 BPM and 540 BPM. The *cyclic tempogram* shows a very clear line around 90 BPM. Besides this, there is a somewhat vaguer line around 135 BPM. If I tap along with the music, I tap around **90 BPM**, so that would be an accurate estimate. In that case, 180 BPM, 360 BPM and 540 BPM would be *tempo upper harmonics*. 135 BPM could be seen as a *tempo fifth* in relation to 90 BPM.
+
+In the high-level corpus features, the tempo of this track is presented as 124 BPM, which is interestingly enough not that accurate. 
+
+Tempograms
+----------------------------------------------------------------------------------
+### Tempogram
+
+``` {r tempo gram track 2}
+"features/sven-n-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+
+``` {r cyclic tempogram track 2}
+"features/sven-n-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+
 Key- & Chordograms for my own tracks 
 =================================================================================
 
