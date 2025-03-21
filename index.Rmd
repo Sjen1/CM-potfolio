@@ -89,6 +89,7 @@ compmus_dist |>
   dendro_data() |>
   ggdendrogram()
 ```
+
 > I still need to filter out a few examples I want to use for this, but I do not really know how... Should I filter on  few names or a certain characteristic?
 
 ### Heatmap
@@ -100,6 +101,7 @@ heatmaply(
   dist_method = "euclidean"
 )
 ```
+
 > I still need to filter out a few examples I want to use for this, but I do not really know how... Should I filter on  few names or a certain characteristic?
 
 Classification {data-navmenu="Clustering and Classification"}
@@ -239,6 +241,7 @@ compmus2025_filtered |>
     colour = "AI"
   )
 ```
+
 > This plot shows the relation of *valence*, *arousal* and *Tempo* to the question whether a track is made by AI or not. 
 
 
