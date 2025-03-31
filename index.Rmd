@@ -2,7 +2,8 @@
 title: "Computational Musicology Portfolio"
 name: "Sven"
 output: 
-  flexdashboard::flex_dashboard
+  flexdashboard::flex_dashboard:
+    css: TurqoiseStyles.css
 ---
 
 ```{r load packages, include=FALSE}
@@ -21,7 +22,7 @@ library(randomForest)
 library(ranger)
 ```
 
-```{r load source}
+```{r load source, include=FALSE}
 source("compmus 17.26.21.R")
 
 get_conf_mat <- function(fit) {
@@ -42,328 +43,661 @@ get_pr <- function(fit) {
 ```
 
 ``` {r load data frame, include=FALSE}
-compmus2025 <- read.csv2("compmus2025.csv", sep = ";")
+compmus2025 <- read.csv2("compmus2025_update2.csv", sep = ";")
 ```
 
- ```{r create danceability table, include=FALSE}
-# compmus2025_dance <- 
-#  compmus2025 %>%
-#    group_by(Names) %>%
-#    summarize(meanDanceability = mean(danceability))
- ```
+Introduction and my own tracks
+=============================================================================
+### Reasearch introduction
+Dear reader,
+
+My name is Sven and this is the dashboard I have made in the course Computational Musicology.
+
+In this dashboard, I will show different visualisation based on several tracks made by our class. First, I will introduce our class corpus with a few graphs and show different Essentia-features in relation to the tracks. Second, I will analyse six songs based on their **structure**, **tonal features** and **tempo**. Third, I will build a model for predicting *danceability* in the class corpus. At the final page, I will end this dashboard by a concluding section.
+
+This dashboard will be guided by the following question: what musical features contribute to *danceability* within our class corpus?
 
 
-Clustering and Heatmap {data-navmenu="Clustering and Classification"}
-==============================================================================
+### Own tracks in compmus2025
+Let me start off by telling some more about my own tracks.
 
-```{r pre-processing}
-cluster_juice <-
-  recipe(
-    filename ~
-      arousal +
-      danceability +
-      instrumentalness +
-      tempo +
-      valence,
-    data = compmus2025
-  ) |>
-  step_center(all_predictors()) |>
-  step_scale(all_predictors()) |> 
-  prep(compmus2025) |>
-  juice() |>
-  column_to_rownames("filename")
-```
+**AI Prompts:**
+For the first track, I used https://www.jenmusic.ai to create it and provided it with the following prompt: “I would like a 6/8 meter, often stressing this meter, but at certain moments provided with hemiolas. It should be a ballad, structured as: intro - verse - pre-chorus - chorus - break - verse - chorus - chorus - outro. As instruments, it should use a piano, soft percussion, a string quartet and some woodwinds. The piano provides a progression consisting of chords with additional notes (such as 7ths, 9ths, 11ths, 13ths) and sus-chords. The soft percussion starts minimal, but gets more extensive in the choruses. The strings play throughout the whole song, but the viola mainly provides the melody. The woodwinds are only used to emphasize the pre-chorus and the chorus. The ballad should be in D major as key and has a slow to medium tempo. The reverb should be as if the piece is played in a small hall.” I tried to be specific in many aspects to see if the AI tool would create something that would meet my ‘demands’. Even though it did not in many ways, it picked up on some features of the prompt.
 
-```{r computing distances}
-compmus_dist <- dist(cluster_juice, method = "euclidean")
-```
+For the second track, I used https://www.stableaudio.com to create it and provided it with the following prompt: “soft ballad, 6/8, D major, slow to medium tempo, piano, soft percussion gets more extensive over-time, string quartet, melody played by viola, soft woodwinds, triad chords played by piano, added note chords played by piano, hemiolas, small hall reverb.” This tool specified that it would work better when using short descriptions, so I tried to recreate the prompt I used for track one as much as I could with this in mind. Some ‘demands’ are now less elaborate or not mentioned at all. Again, it does seem to leave out some ‘demands’, but many others are to some extent met.
 
 
-Clustering and Heatmap {.tabset}
--------------------------------------------------------------------
-### Hierarchical clustering
+Class Corpus Table
+==================================================================================
 
-```{r hierarchical clustering}
-compmus_dist |> 
-  hclust(method = "single") |> 
-  dendro_data() |>
-  ggdendrogram()
-```
-
-> I still need to filter out a few examples I want to use for this, but I do not really know how... Should I filter on  few names or a certain characteristic?
-
-### Heatmap
-```{r heatmap}
-heatmaply(
-  cluster_juice,
-  hclustfun = hclust,
-  hclust_method = "average",
-  dist_method = "euclidean"
-)
-```
-
-> I still need to filter out a few examples I want to use for this, but I do not really know how... Should I filter on  few names or a certain characteristic?
-
-Classification {data-navmenu="Clustering and Classification"}
-=========================================================================================
-Graphs
--------------------------------------------------------------------------------
-```{r filtering for AI}
-compmus2025_filtered <- 
-  compmus2025 |> filter(!is.na(ai)) |> 
-  mutate(ai = factor(if_else(ai, "AI", "Non-AI")))
-```
-
-```{r pre-processing 2}
-classification_recipe <-
-  recipe(
-    ai ~
-      arousal +
-      danceability +
-      instrumentalness +
-      tempo +
-      valence,
-    data = compmus2025_filtered
-  ) |>
-  step_center(all_predictors()) |>
-  step_scale(all_predictors())
-```
-
-```{r cross-validation}
-compmus_cv <- compmus2025_filtered |> vfold_cv(5)
-```
-
-```{r k nearest neighboour}
-knn_model <-
-  nearest_neighbor(neighbors = 1) |>
-  set_mode("classification") |> 
-  set_engine("kknn")
-classification_knn <- 
-  workflow() |> 
-  add_recipe(classification_recipe) |> 
-  add_model(knn_model) |> 
-  fit_resamples(compmus_cv, control = control_resamples(save_pred = TRUE))
-```
-
-### Mosaic matrix
-```{r mosaic plot}
-classification_knn |> get_conf_mat() |> autoplot(type = "mosaic")
-```
-
-### Heatmap Matrix
-```{r heatmap plot}
-classification_knn |> get_conf_mat() |> autoplot(type = "heatmap")
-```
-
-Tables and comments
-----------------------------------------------------------------------------
-
-### Knn classification
-```{r classification knn}
-classification_knn |> get_conf_mat()
-```
-
-### Precision and recall
-```{r compute precision}
-classification_knn |> get_pr()
-```
-
-### Comments
-These matrices show how well the model works. It can be seen that there are 31 *True Positives*, 20 *False Positives*, 18 *False Negatives* and 21 *True Negatives*. The model has an accuracy of 57.8%.  
-
-
-Decision-tree {data-navmenu="Clustering and Classification"}
-========================================================================
-
-```{r random forest basis}
-forest_model <-
-  rand_forest() |>
-  set_mode("classification") |> 
-  set_engine("ranger", importance = "impurity")
-indie_forest <- 
-  workflow() |> 
-  add_recipe(classification_recipe) |> 
-  add_model(forest_model) |> 
-  fit_resamples(
-    compmus_cv, 
-    control = control_resamples(save_pred = TRUE)
-  )
-```
-
-Variable importance 
---------------------------------------------------------------------
-### Variable Importance
-```{r importance}
-workflow() |> 
-  add_recipe(classification_recipe) |> 
-  add_model(forest_model) |> 
-  fit(compmus2025_filtered) |> 
-  pluck("fit", "fit", "fit") |>
-  ranger::importance() |> 
-  enframe() |> 
-  mutate(name = fct_reorder(name, value)) |> 
-  ggplot(aes(name, value)) + 
-  geom_col() + 
-  coord_flip() +
-  theme_minimal() +
-  labs(x = NULL, y = "Importance")
-```
-
-### Comments
-It can be seen that *instrumentalness* is the most influental on the model's prediction whether a track is made by AI or not. Besides this, matrix shows that there are 35 *True Positives*, 16 *False Positives*, 14 *False Negatives* and 25 *True Negatives*. The model has an accuracy of 66.7%.
-
-Further information
-------------------------------------------------------------------------------
-### Precision and Recall
-```{r precision and recall}
-indie_forest |> get_pr()
-```
-
-### Heatmap Matrix
-```{r heatmap plot 2}
-indie_forest |> get_conf_mat() |> autoplot(type = "heatmap")
-```
-
-Final plot {data-navmenu="Clustering and Classification"}
-====================================================================================
-Final plot
+Column 1 
 ----------------------------------------------------------------------------------
-### Variables which have a strong coherence to AI-prediction
-```{r new plot}
-compmus2025_filtered |>
-  ggplot(aes(x = valence, y = arousal, colour = ai, size = tempo)) +
-  geom_point(alpha = 0.8) +
-  scale_color_viridis_d() +
+### Compmus2025 Table
+
+```{r friendly table}
+compmus2025_relocate <-
+compmus2025 %>% 
+  relocate(name, .after = filename) %>%
+  relocate(danceability, .after = name) %>%
+  relocate(dance, .after = danceability) %>%
+  relocate(arousal, .after = dance) %>%
+  relocate(valence, .after = engagingness) %>%
+  relocate(tempo, .after = valence) 
+
+datatable(compmus2025_relocate, rownames = FALSE, options = list(pageLength = 13))
+```
+
+> This table shows a diverse range of information about the tracks. Besides the *filenames*, it displayes the *approachability*, *arousal*, *danceability*, *engagingness*, *instrumentalness*, *tempo*, *valence*, *usage of ai to create the track* and the *names_tracknumber of the students*.The information in this table will be the base for my first visualisation. In order to create the *dance* column, I used the condition that *danceability* >= 0.7 for a track to be danceable (= true). Every track that has a *danceability* < 0.7 is then *non-danceable* (= false).
+
+
+First Class Corpus Visualisations {.storyboard}
+=====================================================================================
+### Comparison of all songs
+
+```{r comparison of all songs}
+Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence, size = engagingness)) + geom_jitter(alpha = 0.6) +
   labs(
-    x = "Valence",
-    y = "Arousal",
-    size = "Tempo",
-    colour = "AI"
+    x = "Arousal",
+    y = "Danceability",
+    size = "Engagingness",
+    colour = "Valence"
   )
+
+ggplotly(Comparison_gg)
 ```
 
-> This plot shows the relation of *valence*, *arousal* and *Tempo* to the question whether a track is made by AI or not. 
+***
+This graph shows the relationship between the *danceability* and *arousal*. Especially at the beginning of the graph, it seems like there is a correlation: when *danceability* rises, so does *arousal*. Combining this with *engagingness*, which is shown by the size of the dots, it can be seen that when *danceability* and *arousal* rise, there is often also an increase in *engagingness*. 
+
+***
+Lastly *valence* is added to the graph as the colour of the dots. It can be seen that often *valence* and *engagingness* increase together. However, at certain moments, the relationship between *valence* and *engagingness* is less apparent. 
+
+### Whose song is the most danceable?
+
+```{r danceability plot}
+Dance_gg <- ggplot(compmus2025, aes(x = reorder(name, danceability), y = danceability, fill = ai)) + geom_col(alpha = 0.9) + theme(axis.text.x = element_text(angle = 45, size = 7)) +
+  labs(
+    x = NULL,
+    y = "Danceability",
+    fill = "AI?"
+  )
+
+ggplotly(Dance_gg)
+```
+
+***
+In this graph, I show the *daneability* of each track in the class corpus in relation to the others: the higher the bar, the higher the *danceability*. The colors of the bars corresponds to the question whether *AI* has been used to create to track.
+
+### Songs I will use in this dashboard
+```{r filter 6 danceability tracks for danceability plot, include=FALSE}
+Compmus2025Danceplot <- compmus2025 %>%
+  arrange(danceability) %>%
+  filter(name == "Marit_1" | name == "Ke_2" | name == "Sven_2" | name == "Sven_1" | name == "Roemer_1" | name == "Roemer_2")
+```
+
+```{r picked songs plot}
+Dance_gg_2 <- ggplot(Compmus2025Danceplot, aes(x = reorder(name, danceability), y = danceability)) + geom_col(alpha = 0.9) + theme(axis.text.x = element_text(angle = 45, size = 12)) +
+  labs(
+    x = NULL,
+    y = "Danceability"
+  )
+
+ggplotly(Dance_gg_2)
+```
+***
+The tracks displayed in this graph will be compared throughout my dashboard. Besides my own two tracks, I choose the two most and the two least *danceable* tracks. As shown, my own tracks are on the low side of the *danceability* spectrum as well.
 
 
-Track 1 {data-navmenu="Novelty Functions and Tempograms"}
-=================================================================================
+Marit_1 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+===================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Marit_1}
+"features/marit-r-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
+```
 
-Novelty functions
+### Cepstrogram
+``` {r create cepstrogram Marit_1}
+"features/marit-r-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+Self-similarity Matrices {data-width=375}
 ---------------------------------------------------------------------------------
-### Energy-based novelty function
-
-``` {r energy-based novelty function track 1}
-"features/sven-n-1.json" |>
-  compmus_energy_novelty() |> 
-  ggplot(aes(t, novelty)) +
-  geom_line() +
-  theme_minimal() +
-  labs(x = "Time (s)", y = "Energy Novelty")
+### Chroma-based Matrix
+```{r create chroma ssm Marit_1}
+"features/marit-r-1.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                   
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
 ```
 
-### Spectral novelty function
-
-``` {r spectral novelty function track 1}
-"features/sven-n-1.json" |>
-  compmus_spectral_novelty() |> 
-  ggplot(aes(t, novelty)) +
-  geom_line() +
-  theme_minimal() +
-  labs(x = "Time (s)", y = "Spectral Novelty")
+### Timbre-based Matrix
+```{r create timbre ssm Marit_1}
+"features/marit-r-1.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
 ```
 
+Comments {data-width=250}
+--------------------------------------------------------------------------------
 ### Comments
-The *tempogram* of my first track shows very clear lines around 160 BMP, 320 BPM and 480 BPM. The *cyclic tempogram* shows very clear lines around 80 BPM and 160 BPM. Besides this, there is a somewhat vaguer line around 120 BPM. If I tap along with the music, I tap around **160 BPM**, so that would be an accurate estimate. In that case, 330 BPM and 500 BPM would be *tempo upper harmonics* and 80 BPM would be a *tempo subharmonic*. 120 BPM could be seen as a *tempo lower fourth* in relation to 180 BPM.
+The combination of the *Chroma-based SSM* and the *Timbre-based SSM* shows a clear structure in the song. The *Chroma-based SSM* shows that there is a repeating riff throughout most of the song by the many small recurring patterns and the many dark diagonal lines. The Timbre-based SSM shows a few parts that are slightly different from other parts. The structure could be seen as **Intro-A1-B-A2-Outro**.
 
-In the high-level corpus features, the tempo of this track is presented as 112 BPM, which is interestingly enough not that accurate.  
+Based on both *SSMs*:
 
-Tempograms
-----------------------------------------------------------------------------------
-### Tempogram
+- On 0:00 a guitar riff starts playing, the repetition of it can be seen in the *Chroma-based SSM*.
 
-``` {r tempo gram track 1}
-"features/sven-n-1.json" |>
-  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
+- On 0:15 high-hats and a synthesizer are added, which shows a change in the *Timbre-based SSM*.
+
+- On 0:30 a kick and snare are added.
+
+- On 1:18 the drums change their rhythm and there is some more distortion, which can be seen by the cross in both the *SSMs*.
+
+- On 1:43 clear harmonies are added (a bass?), which ends the cross-section in the *Timbre-based SSM*.
+
+- On 2:45 most of the instruments fade away and there is only a guitar riff left, shown in the *Timbre-based SSM*.
+
+All these moments are shown by changes in the *SSMs*. 
+
+
+Ke_2 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+===================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Ke_2}
+"features/ke-w-2.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
   geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic()
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
 ```
 
-### Cyclic Tempogram
-
-``` {r cyclic tempogram track 1}
-"features/sven-n-1.json" |>
-  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
+### Cepstrogram
+``` {r create cepstrogram Ke_2}
+"features/ke-w-2.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
   geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic()
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
 ```
 
-
-Track 2 {data-navmenu="Novelty Functions and Tempograms"}
-=================================================================================
-
-Novelty functions
+Self-similarity Matrices {data-width=375}
 ---------------------------------------------------------------------------------
-### Energy-based novelty function
-
-``` {r energy-based novelty function track 2}
-"features/sven-n-2.json" |>
-  compmus_energy_novelty() |> 
-  ggplot(aes(t, novelty)) +
-  geom_line() +
-  theme_minimal() +
-  labs(x = "Time (s)", y = "Energy Novelty")
+### Chroma-based Matrix
+```{r create chroma ssm Ke_2}
+"features/ke-w-2.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "aitchison"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
 ```
 
-### Spectral novelty function
-
-``` {r spectral novelty function track 2}
-"features/sven-n-2.json" |>
-  compmus_spectral_novelty() |> 
-  ggplot(aes(t, novelty)) +
-  geom_line() +
-  theme_minimal() +
-  labs(x = "Time (s)", y = "Spectral Novelty")
+### Timbre-based Matrix
+```{r create timbre ssm Ke_2}
+"features/ke-w-2.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
 ```
 
+Comments {data-width=250}
+--------------------------------------------------------------------------------
 ### Comments
-The *tempogram* of my second track shows very clear lines around 180 BMP, 360 BPM and 540 BPM. The *cyclic tempogram* shows a very clear line around 90 BPM. Besides this, there is a somewhat vaguer line around 135 BPM. If I tap along with the music, I tap around **90 BPM**, so that would be an accurate estimate. In that case, 180 BPM, 360 BPM and 540 BPM would be *tempo upper harmonics*. 135 BPM could be seen as a *tempo fifth* in relation to 90 BPM.
+The *Chroma-based SSM* and the *Timbre-based SSM* show the same structure. There are two section constantly alternating and an additional bridge. The track is structured as **A-B1-A-B2-A-C-A-Outro**.
 
-In the high-level corpus features, the tempo of this track is presented as 124 BPM, which is interestingly enough not that accurate. 
+B1 and B2 are almost the same, except for the addition of a vocal-humming in B2. This second B section is also double the length of B1 and the small addition happens in the second half. The Outro part uses the same material as A, but adds a low-pass filter on it in the second half. 
 
-Tempograms
-----------------------------------------------------------------------------------
-### Tempogram
 
-``` {r tempo gram track 2}
-"features/sven-n-2.json" |>
-  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
+
+Sven_2 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+=====================================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Sven_2}
+"features/sven-n-2.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
   geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic()
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
 ```
 
-### Cyclic Tempogram
-
-``` {r cyclic tempogram track 2}
-"features/sven-n-2.json" |>
-  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
+### Cepstrogram
+``` {r create cepstrogram Sven_2}
+"features/sven-n-2.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
   geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic()
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
 ```
 
+Self-similarity Matrices {data-width=375}
+-------------------------------------------------------------------------------
+### Chroma-based Matrix
+```{r create chroma ssm Sven_2}
+"features/sven-n-2.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
+```
 
-Key- & Chordograms for my own tracks 
+### Timbre-based Matrix
+```{r create timbre ssm Sven_2}
+"features/sven-n-2.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
+```
+
+Comments {data-width=250}
+--------------------------------------------------------------------------------
+### Comments
+The *Chroma-based SSM* shows a clear structure in the song. In combination with the *Timbre-based SSM*, the structure could be seen as: **A1-B-C-A2**.
+
+I will combine both of the *SSMs* to analyse the structure, but mainly base myself on the *Timbre-based SSM*:
+
+- On 0:00 a piano melody starts playing.
+
+- On 0:17 high-hats and strings are added.
+
+- On 0:30 a different piano melody starts playing.
+
+- On 0:49 a string instrument gets more prominence. The *Chroma-based SSM* also clearly shows this by the different texture starting at this moment.
+
+- On 1:20 another string instrument starts playing.
+
+- On 1:43 the high-hats are reintroduced and play over a piano melody accompanied by strings. This is a new section as is shown by the *Chroma-based SSM*. 
+
+- On 2:35 a new piano melody is played over the high-hats and soft strings. It sound familiar, like it is a varied form of the first melody.
+
+All these moments are shown by changes in the *SSM*. Even though there are more changes visible than I can hear in the music, it does a well job in showing the structure of the music. 
+
+
+
+Sven_1 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+===================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Sven_1}
+"features/sven-n-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+``` {r create cepstrogram Sven_1}
+"features/sven-n-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+Self-similarity Matrices {data-width=375}
+---------------------------------------------------------------------------------
+### Chroma-based Matrix
+```{r create chroma ssm Sven_1}
+"features/sven-n-1.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "aitchison"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrix
+```{r create timbre ssm Sven_1}
+"features/sven-n-1.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
+```
+
+Comments {data-width=250}
+--------------------------------------------------------------------------------
+### Comments
+Both the *Chroma-based SSM* as the *Timbre-based SSM* do not show a very clear structure. There seem to be a lot of changes throughout the track, without a very stable structure. The structure could be seen as a **A1-B-A2-C**, but it is not really convincing.
+
+The *Timbre-based SSM* is somewhat clearer:
+
+- On 0:00 a combination of strings, woodwinds and percussion starts playing.
+
+- On 0:06 a more steady drum patterns gets introduced.
+
+- On 0:55 most instruments suddenly stop playing. A short drum and string pattern plays, where after the music continues with the same instruments as before, but a different melody and different drum pattern.
+
+- On 1:47 a short string part introduces another new melody and drum pattern.
+
+- On 2:30 a short flute solo starts accompanied by the other instruments.
+
+All these moments are shown by changes in the *SSMs*. Even though there are more changes visible than I can hear in the music, it does a well job in showing the music's structure. 
+
+
+
+
+Roemer_1 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+===================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Roemer_1}
+"features/roemer-i-1.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+``` {r create cepstrogram Roemer_1}
+"features/roemer-i-1.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+Self-similarity Matrices {data-width=375}
+---------------------------------------------------------------------------------
+### Chroma-based Matrix
+```{r create chroma ssm Roemer_1}
+"features/roemer-i-1.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrix
+```{r create timbre ssm Roemer_1}
+"features/roemer-i-1.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
+```
+
+Comments {data-width=250}
+--------------------------------------------------------------------------------
+### Comments
+The *Chroma-based SSM* does not shows a very clear structure in the song. However, by the small diagonal lines, it shows that from around 55 seconds towards the ending many repetition of the material takes place.
+
+The *Timbre-based SSM* shows the structure some better:
+
+- On 0:00 the percussion starts playing together with some synthesized pitches.
+
+- On 0:19 the synthesized pitches create sort of a melody.
+
+- On 0:37 this melody partly fades away and the percussion becomes more prominent.
+
+- On 0:57 the percussion seems to change somewhat.
+
+- From 1:04 on, the music starts having more sweeps and pitched elements. It starts sounding fuller. Each sweep or new element might be shown by a bright green line (many follow each other after around 80 seconds).
+
+All these moments are shown by changes in the *SSM*. Even though there are more changes visible than I can hear in the music, it does a well job in showing the structure of the music. 
+
+
+
+
+Roemer_2 {data-navmenu="Self-Similarity Matrices based on Chromagrams and Cepstrograms"}
+===================================================================================
+Chromagram and Cepstrogram {data-width=375}
+-----------------------------------------------------------------------------------------
+### Chromagram
+``` {r create chromagram Roemer_2}
+"features/roemer-i-2.json" |>            
+  compmus_chroma(norm = "identity") |>  
+  ggplot(aes(x = time, y = pc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:11,
+    minor_breaks = NULL,
+    labels = c(
+                "C", "C# / Db", "D", "D# / Eb",
+                "E", "F", "F# / Gb", "G",
+                "G# / Ab", "A", "A# / Bb", "B"
+              )
+  ) +
+  scale_fill_viridis_c(guide = "none") +  
+  labs(x = "Time (s)", y = "Pitch class", fill = NULL) +
+  theme_classic()                           
+```
+
+### Cepstrogram
+``` {r create cepstrogram Roemer_2}
+"features/roemer-i-2.json" |>              
+  compmus_mfccs(norm = "identity") |>       
+  ggplot(aes(x = time, y = mfcc, fill = value)) + 
+  geom_raster() +
+  scale_y_continuous(
+    breaks = 0:12,
+    minor_breaks = NULL,
+  ) +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
+  theme_classic()   
+```
+
+Self-similarity Matrices {data-width=375}
+---------------------------------------------------------------------------------
+### Chroma-based Matrix
+```{r create chroma ssm Roemer_2}
+"features/roemer-i-2.json" |>          
+  compmus_chroma(norm = "chebyshev") |>        
+  compmus_self_similarity(
+    feature = pc,
+    distance = "manhattan"                  
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic()      
+```
+
+### Timbre-based Matrix
+```{r create timbre ssm Roemer_2}
+"features/roemer-i-2.json" |>                  
+  compmus_mfccs(norm = "euclidean") |>       
+  compmus_self_similarity(
+    feature = mfcc,
+    distance = "euclidean"              
+  ) |>   
+  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +        
+  labs(x = "Time (s)", y = "Time (s)", fill = NULL) +
+  theme_classic() 
+```
+
+Comments {data-width=250}
+--------------------------------------------------------------------------------
+### Comments
+The *Chroma-based SSM* shows a clear structure in the song. It looks very similar to the *Timbre-based SSM* and can be seen as **A1-B-A2-Outro**.
+
+I will mainly use the *Timbre-based SSM* to set out a structure for the piece:
+
+- On 0:00 a guitar riff and percussion starts playing.
+
+- On 0:30 a sweep brings in a new synthesized melodic line and more percussion that plays along with the riff.
+
+- On 0:53 a the riff and synthesized melodic line disappear and get replaced by percussion.
+
+- On 1:01 long synthesized notes start playing over the percussion.
+
+- On 1:40 a new drum riff is added, which is marked by a clear line in the *Chroma-based SSM*.
+
+- On 1:50 the *Chroma-based SSM* shows a big changes (a wide green line), which indicates a modulation from D to C (as can be seen in the *chromagram*).
+
+All these moments are shown by changes in the *SSMs*.
+
+
+
+Keygrams & Chordograms 
 =================================================================================
 
 ```{r load chord and key information, include=FALSE}
@@ -383,79 +717,79 @@ minor_key <-
 chord_templates <-
   tribble(
     ~name, ~template,
-    "Gb:7", circshift(seventh_chord, 6),
-    "Gb:maj", circshift(major_chord, 6),
-    "Bb:min", circshift(minor_chord, 10),
-    "Db:maj", circshift(major_chord, 1),
-    "F:min", circshift(minor_chord, 5),
-    "Ab:7", circshift(seventh_chord, 8),
-    "Ab:maj", circshift(major_chord, 8),
-    "C:min", circshift(minor_chord, 0),
-    "Eb:7", circshift(seventh_chord, 3),
-    "Eb:maj", circshift(major_chord, 3),
-    "G:min", circshift(minor_chord, 7),
-    "Bb:7", circshift(seventh_chord, 10),
-    "Bb:maj", circshift(major_chord, 10),
-    "D:min", circshift(minor_chord, 2),
-    "F:7", circshift(seventh_chord, 5),
-    "F:maj", circshift(major_chord, 5),
-    "A:min", circshift(minor_chord, 9),
-    "C:7", circshift(seventh_chord, 0),
-    "C:maj", circshift(major_chord, 0),
-    "E:min", circshift(minor_chord, 4),
-    "G:7", circshift(seventh_chord, 7),
-    "G:maj", circshift(major_chord, 7),
-    "B:min", circshift(minor_chord, 11),
-    "D:7", circshift(seventh_chord, 2),
-    "D:maj", circshift(major_chord, 2),
-    "F#:min", circshift(minor_chord, 6),
-    "A:7", circshift(seventh_chord, 9),
-    "A:maj", circshift(major_chord, 9),
-    "C#:min", circshift(minor_chord, 1),
-    "E:7", circshift(seventh_chord, 4),
-    "E:maj", circshift(major_chord, 4),
-    "G#:min", circshift(minor_chord, 8),
-    "B:7", circshift(seventh_chord, 11),
-    "B:maj", circshift(major_chord, 11),
-    "D#:min", circshift(minor_chord, 3)
+    "Gb7", circshift(seventh_chord, 6),
+    "Gb", circshift(major_chord, 6),
+    "Bbm", circshift(minor_chord, 10),
+    "Db", circshift(major_chord, 1),
+    "Fm", circshift(minor_chord, 5),
+    "Ab7", circshift(seventh_chord, 8),
+    "Ab", circshift(major_chord, 8),
+    "Cm", circshift(minor_chord, 0),
+    "Eb7", circshift(seventh_chord, 3),
+    "Eb", circshift(major_chord, 3),
+    "Gm", circshift(minor_chord, 7),
+    "Bb7", circshift(seventh_chord, 10),
+    "Bb", circshift(major_chord, 10),
+    "Dm", circshift(minor_chord, 2),
+    "F7", circshift(seventh_chord, 5),
+    "F", circshift(major_chord, 5),
+    "Am", circshift(minor_chord, 9),
+    "C7", circshift(seventh_chord, 0),
+    "C", circshift(major_chord, 0),
+    "Em", circshift(minor_chord, 4),
+    "G7", circshift(seventh_chord, 7),
+    "G", circshift(major_chord, 7),
+    "Bm", circshift(minor_chord, 11),
+    "D7", circshift(seventh_chord, 2),
+    "D", circshift(major_chord, 2),
+    "F#m", circshift(minor_chord, 6),
+    "A7", circshift(seventh_chord, 9),
+    "A", circshift(major_chord, 9),
+    "C#m", circshift(minor_chord, 1),
+    "E7", circshift(seventh_chord, 4),
+    "E", circshift(major_chord, 4),
+    "G#m", circshift(minor_chord, 8),
+    "B7", circshift(seventh_chord, 11),
+    "B", circshift(major_chord, 11),
+    "D#m", circshift(minor_chord, 3)
   )
 
 key_templates <-
   tribble(
     ~name, ~template,
-    "Gb:maj", circshift(major_key, 6),
-    "Bb:min", circshift(minor_key, 10),
-    "Db:maj", circshift(major_key, 1),
-    "F:min", circshift(minor_key, 5),
-    "Ab:maj", circshift(major_key, 8),
-    "C:min", circshift(minor_key, 0),
-    "Eb:maj", circshift(major_key, 3),
-    "G:min", circshift(minor_key, 7),
-    "Bb:maj", circshift(major_key, 10),
-    "D:min", circshift(minor_key, 2),
-    "F:maj", circshift(major_key, 5),
-    "A:min", circshift(minor_key, 9),
-    "C:maj", circshift(major_key, 0),
-    "E:min", circshift(minor_key, 4),
-    "G:maj", circshift(major_key, 7),
-    "B:min", circshift(minor_key, 11),
-    "D:maj", circshift(major_key, 2),
-    "F#:min", circshift(minor_key, 6),
-    "A:maj", circshift(major_key, 9),
-    "C#:min", circshift(minor_key, 1),
-    "E:maj", circshift(major_key, 4),
-    "G#:min", circshift(minor_key, 8),
-    "B:maj", circshift(major_key, 11),
-    "D#:min", circshift(minor_key, 3)
+    "Gb major", circshift(major_key, 6),
+    "Bb minor", circshift(minor_key, 10),
+    "Db major", circshift(major_key, 1),
+    "F minor", circshift(minor_key, 5),
+    "Ab major", circshift(major_key, 8),
+    "C minor", circshift(minor_key, 0),
+    "Eb major", circshift(major_key, 3),
+    "G minor", circshift(minor_key, 7),
+    "Bb major", circshift(major_key, 10),
+    "D minor", circshift(minor_key, 2),
+    "F major", circshift(major_key, 5),
+    "A minor", circshift(minor_key, 9),
+    "C major", circshift(major_key, 0),
+    "E minor", circshift(minor_key, 4),
+    "G major", circshift(major_key, 7),
+    "B minor", circshift(minor_key, 11),
+    "D major", circshift(major_key, 2),
+    "F# minor", circshift(minor_key, 6),
+    "A major", circshift(major_key, 9),
+    "C# minor", circshift(minor_key, 1),
+    "E major", circshift(major_key, 4),
+    "G# minor", circshift(minor_key, 8),
+    "B major", circshift(major_key, 11),
+    "D# minor", circshift(minor_key, 3)
   )
 ```
 
-Track 1 grams {.tabset}
+Keygrams {data-width=375, .tabset}
 -----------------------------------------------------------------------------------------
-### Keygram Track 1
+### Keygrams: Marit_1
 
-``` {r create keygram 1}
-"features/sven-n-1.json" |> 
+``` {r create keygram Marit_1}
+"features/marit-r-1.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
     key_templates,  
@@ -465,41 +799,30 @@ Track 1 grams {.tabset}
   ggplot(aes(x = time, y = name, fill = d)) + 
   geom_raster() +
   scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
   theme_classic()
 ```
 
-### Chordogram Track 1
+### Ke_2
 
-``` {r create chordogram 1}
-"features/sven-n-1.json" |> 
+``` {r create keygram Ke_2}
+"features/ke-w-2.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
-    chord_templates,  
+    key_templates,  
     norm = "euclidean",  
     distance = "manhattan"
   ) |>
   ggplot(aes(x = time, y = name, fill = d)) + 
   geom_raster() +
   scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
   theme_classic()
 ```
 
-### Comments Track 1
+### Sven_2
 
-In the prompts I asked the AI music generators to compose a piece in **D major**. Looking at the keygram of track 1, the darkest lines correspond to the keys of *D major*, *D minor* and *A major*. *D minor* is the parallel minor of *D major*. Because of the centricity of the tone *D* within both scales, it is not odd that *D minor* seems prominent in the keygram. The prominence of *A major* can also be explained, because of its neighboring position to *D major* in the circle of fifths. The two keys have six corresponding notes and the tone *A* (as well as the A major chord) has an important function as dominant in the scale of *D major*. 
-
-***
-
-Looking at the chordogram of track 1, the darkest spots appear at the following chords: *D major*, *A major*, *G major*, *B minor* and *F# minor*. These are the tonic, dominant,  subdominant, submediant and mediant of the **D major** scale respectively. The chords are, thus, all diatonic chords and their appearance in the piece are not surprising. Two other remarkable lines are those of *D minor* and *G minor*. These two chords appear in the *D minor* scale, which explains - together with the understanding that this is the parallel minor of *D major* - why they appear in the chordogram as well.
-
-
-Track 2 grams {.tabset}
-------------------------------------------------------------------
-### Keygram Track 2
-
-``` {r create keygram 2}
+``` {r create keygram Sven_2}
 "features/sven-n-2.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
@@ -510,13 +833,101 @@ Track 2 grams {.tabset}
   ggplot(aes(x = time, y = name, fill = d)) + 
   geom_raster() +
   scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
   theme_classic()
 ```
 
-### Chordogram Track 2
+### Sven_1
 
-``` {r create chordogram 2}
+``` {r create keygram Sven_1}
+"features/sven-n-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    key_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
+  theme_classic()
+```
+
+### Roemer_1
+
+``` {r create keygram Roemer_1}
+"features/roemer-i-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    key_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
+  theme_classic()
+```
+
+### Roemer_2
+
+``` {r create keygram Roemer_2}
+"features/roemer-i-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    key_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Key templates", fill = NULL) +
+  theme_classic()
+```
+
+
+Chordograms {data-width=375, .tabset}
+-----------------------------------------------------------------------------------------
+### Chordograms: Marit_1
+
+``` {r create chordogram Marit_1}
+"features/marit-r-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
+  theme_classic()
+```
+
+### Ke_2
+
+``` {r create chordogram Ke_2}
+"features/ke-w-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
+  theme_classic()
+```
+
+### Sven_2
+
+``` {r create chordogram Sven_2}
 "features/sven-n-2.json" |> 
   compmus_chroma(norm = "chebyshev") |> 
   compmus_match_pitch_templates(
@@ -527,241 +938,820 @@ Track 2 grams {.tabset}
   ggplot(aes(x = time, y = name, fill = d)) + 
   geom_raster() +
   scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = "Template", fill = NULL) +
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
   theme_classic()
 ```
 
-### Comments Track 2
+### Sven_1
 
-In the prompts I asked the AI music generators to compose a piece in **D major**. Other than track 1, track 2 does not seem to be in *D major*. The *D major* line is light and instead the lines of *C major* and *A major* seem to be the darkest and, thus, the most prominent. However, another line that is remarkable is that of *A minor*, which is not the darkest, but it is on the darker side throughout the whole track. Between 50-100s more importance seems to be given to *C major* and between 110-160s this seems to shift to *A major*. *A minor* can in this sense be seen as the bridge between both scales: *C major* is its relative major key and *A major* is its parallel major key. Although the track is not in *D major*, the other three scales seem to work together (through modulation) to create the tonal space in this track. 
+``` {r create chordogram Sven_1}
+"features/sven-n-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
+  theme_classic()
+```
+
+### Roemer_1
+
+``` {r create chordogram Roemer_1}
+"features/roemer-i-1.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
+  theme_classic()
+```
+
+### Roemer_2
+
+``` {r create chordogram Roemer_2}
+"features/roemer-i-2.json" |> 
+  compmus_chroma(norm = "chebyshev") |> 
+  compmus_match_pitch_templates(
+    chord_templates,  
+    norm = "euclidean",  
+    distance = "manhattan"
+  ) |>
+  ggplot(aes(x = time, y = name, fill = d)) + 
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +      
+  labs(x = "Time (s)", y = "Chord templates", fill = NULL) +
+  theme_classic()
+```
+
+
+Comments {data-width=250, .tabset}
+-----------------------------------------------------------------------------------------
+### Comments: Marit_1
+In this *keygram*, it is hard to find out which line really stand outs, since none of them is particularly dark. The lines of *E major*, *B major*, *A major*, *A minor* and *E minor* seem to be the darkest and, thus, the most prominent. *E minor* is the parallel minor key of *E major* and *A minor* is the parallel minor key of *A major*. It is likely that the music is either centered around A or E for this reason, rather than around B, since the line of *B minor* does not stand out much. Looking at the *chromagram* made before, the pitch classes E, F#, A and B seem to be the most recurring throughout the piece. G# seems to be constant throughout the piece as well, while C# and C alternate. At some parts there is also high energy in the pitch classes D and G. Although it is not very clear, I will suggest this piece uses a mixture of the **A major** and the three **A minor** scales (natural, harmonic and melodic).   
 
 ***
 
-Looking at the chordogram of track 2, the chord progression seems to show modulations as well. 0-50s puts the most emphasis on the *A minor* chord. *A major* and *A7* is also apparent, likely because of the centricity of the tone *A*. 50-110s shows a shift to the *C major*, *C minor*, *F minor* chords (perhaps then not a shift to the key of *C major*, but to the key of *C minor*?), in which the *A major* line suddenly gets very bright compared to the former section (the chord is unlikely to appear in this section). 110-130s shows a shift again, emphasizing the chords of *A major* , *A minor*, *F minor* and *D minor* - a seemingly combination of the *A major* and *A minor* key. After 130s, the *F minor* chord dissapears again, which puts a bigger emphasis on the *A minor* and *D minor* chords. With these chords, the track seems to end in the **A minor** key.
+Looking at the *chordogram* of Marit_1, the chord progression seems to show some ambiguity as well. The darkest lines correspond to the *A minor* and *E minor* chords throughout the whole song. However, such emphasis seems to be given to thr *A major* and *E major* chords. It might be possible, that the track uses power chords, rather than major or minor chords, which could justify the *chordograms* ambiguity between the major and minor variants of both chords and the keys. Besides this, *B minor*, *B major*, *F# minor* and *D major* chords are identified by the *chordogram*. The only chord that is less likely part of the *A major* or *A minor* key is *B major*, but this chord can be understood as the *B minor* chord or a power chord in most cases, since the chord has two notes in common with those chords and is to some extent similar. 
+
+Lastly, looking back at the most represented notes in the *chordogram* (E, F#, A and B) discussed before, the use of power chords can be set out more specifically. Often, the most important chords of a song are the *tonic*, *subdominant* / *super tonic* and *dominant*. In this song, assuming it is in *A major* or *A melodic minor* for most part, the power chords of the  *tonic* (A-E), *super tonic* (B-F#) and *dominant* (E-B) can all be formed with the most represented notes in the *chordogram*. 
 
 
-Track 1 {data-navmenu="SSMs for my own tracks"} 
-==================================================================================
+### Ke_2
+In this *keygram*, it is hard to find out which line really stand outs, since none of them is particularly dark. The lines of *Gb major*, *Db major*, *Ab major* and *Eb major* seem to be the darkest and, thus, the most prominent. However, *B major* shows a few dark sections as well. *B major* is enharmonically equivalent to *Cb major*, which shows that the five darkest lines are all directly related to each other by the circle of fifths. The *chromogram* shows that the pitch classes B, C#, D#, E, F#, G# and A# are most important to the track. These pitches together form the **B major** scale. Interestingly enough, this is not the most clearly visible line in the *keygram*.
 
-Chromagram and Cepstrogram
------------------------------------------------------------------------------------------
-### Chromagram
+***
 
-``` {r create chromagram 2}
-"features/sven-n-2.json" |>            
-  compmus_chroma(norm = "identity") |>  
-  ggplot(aes(x = time, y = pc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:11,
-    minor_breaks = NULL,
-    labels = c(
-                "C", "C#|Db", "D", "D#|Eb",
-                "E", "F", "F#|Gb", "G",
-                "G#|Ab", "A", "A#|Bb", "B"
-              )
-  ) +
-  scale_fill_viridis_c(guide = "none") +  
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()                           
-```
-
-### Cepstrogram
-
-``` {r create cepstrogram 2}
-"features/sven-n-2.json" |>              
-  compmus_mfccs(norm = "identity") |>       
-  ggplot(aes(x = time, y = mfcc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:12,
-    minor_breaks = NULL,
-  ) +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
-  theme_classic()   
-```
-
-### Comments
-Track two seems somewhat structured in the *chroma-based matrics*, but also in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is an A1-B-A2-?A3? structure. However the structure in the *timbre-based matrice* is harder to point out, because it seems to change a lot.
+Looking at the *chordogram* of Ke_2, the chord progression seems to show some ambiguity as well. The darkest lines correspond to the *G# minor*, *E major*, *C# minor* and *Gb major* (enharmonically equivalent to *F# major*) chords throughout the whole song. Besides these chords, *E minor* and *G# major* have some darker parts in their line, which can be explained by the notes they share with their major variants, which are prominent in the track. Interestingly *B major* does not seem to be especially significant in the track, even though it is the *tonic* of the scale. This absence of very clear *tonic* statements could justify why the *B major* scale is not shown as a dark line in the *keygram*, even though it seems to be the best fit for the track.
 
 
-Self-similarity Matrices
--------------------------------------------------------------------------------
-### Chroma-based Matrice
+### Sven_2
+In the prompts I asked the AI music generators to compose a piece in **D major**. Other than Sven_1, Sven_2 does not seem to be in *D major*. The *D major* line is light and instead the lines of *C major* and *A major* seem to be the darkest and, thus, the most prominent. However, another line that is remarkable is that of *A minor*, which is not the darkest, but it is on the darker side throughout the whole track. Between 50-100s more importance seems to be given to *C major* and between 110-160s this seems to shift to *A major*. *A minor* can in this sense be seen as the bridge between both scales: *C major* is its relative major key and *A major* is its parallel major key. Although the track is not in *D major*, the other three scales seem to work together (through modulation) to create the tonal space in this track. 
 
-```{r create chroma ssm 2}
-"features/sven-n-2.json" |>          
-  compmus_chroma(norm = "chebyshev") |>        
-  compmus_self_similarity(
-    feature = pc,
-    distance = "manhattan"                  
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()      
-```
+***
 
-### Timbre-based Matrice
+Looking at the *chordogram* of Sven_2, the chord progression seems to show modulations as well. 0-50s puts the most emphasis on the *A minor* chord. *A major* and *A7* is also apparent, likely because of the centricity of the tone *A*. 50-110s shows a shift to the *C major*, *C minor*, *F minor* chords (perhaps then not a shift to the key of *C major*, but to the key of *C minor*?), in which the *A major* line suddenly gets very bright compared to the former section (the chord is unlikely to appear in this section). 110-130s shows a shift again, emphasizing the chords of *A major* , *A minor*, *F minor* and *D minor* - a seemingly combination of the *A major* and *A minor* key. After 130s, the *F minor* chord disappears again, which puts a bigger emphasis on the *A minor* and *D minor* chords. With these chords, the track seems to end in the **A minor** key.
 
-```{r create timbre ssm 2}
-"features/sven-n-2.json" |>                  
-  compmus_mfccs(norm = "euclidean") |>       
-  compmus_self_similarity(
-    feature = mfcc,
-    distance = "euclidean"              
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic() 
-```
+### Sven_1
+In the prompts I asked the AI music generators to compose a piece in **D major**. Looking at the *keygram* of Sven_1, the darkest lines correspond to the keys of *D major*, *D minor* and *A major*. *D minor* is the parallel minor of *D major*. Because of the centricity of the tone *D* within both scales, it is not odd that *D minor* seems prominent in the *keygram*. The prominence of *A major* can also be explained, because of its neighboring position to *D major* in the circle of fifths. The two keys have six corresponding notes and the tone *A* (as well as the A major chord) has an important function as dominant in the scale of *D major*. 
+
+***
+
+Looking at the *chordogram* of Sven_1, the darkest spots appear at the following chords: *D major*, *A major*, *G major*, *B minor* and *F# minor*. These are the *tonic*, *dominant*,  *subdominant*, *submediant* and *mediant* of the **D major** scale respectively. The chords are, thus, all diatonic chords and their appearance in the piece are not surprising. Two other remarkable lines are those of *D minor* and *G minor*. These two chords appear in the *D minor* scale, which explains - together with the understanding that this is the parallel minor of *D major* - why they appear in the *chordogram* as well.
+
+### Roemer_1
+In this *keygram*, it is hard to find out which line really stand outs, since none of them is particularly dark. The lines of **A major** and **A minor** seem to have the darkest parts. Relating this to the *chromagram*, the pitch class A indeed seems to be the most prominent. However, all other pitch classes seem to be present in the track as well, favoring pitch classes E and F the most besides A. 
+
+***
+
+Looking at the *chordogram* of Roemer_1, the chord progression seems unclear as well. All lines have some dark spots and some light spots, which makes it hard to distinguish which one is actually important to the track. The *D minor* and *F major* chords seem to have the darkest spots on the line and might be the darkest two lines throughout the whole track  
+
+The failure of the *keygram* and *chordogram* to clearly identify the key and chord progressions in the track, could to some extent be explained by what is audible. The track exists mainly out of percussion. The synthesized sounds shift a lot and have many effects on them, making it hard to discern a clear pitch and thus a specific key and chords. 
+
+### Roemer_2
+For most of this *keygram*, the darkest lines correspond to the **D major** and **D minor** keys. *D minor* is the relative minor key of *D major*, which they are similar in pitch center and share many notes. This accounts for the prominence of both of the keys together. From around 115 seconds until the end of the song, the *keygram* shows dark lines at the *C major* and *C minor* keys. This indicates a downwards modulation of two semitones. From 55-70 seconds, the *keygram* does not clearly indicate a key, there seems to be a vaguely, yet quickly ascending pattern. 
+
+***
+
+Looking at the *chordogram* of Roemer_2, the chord progression seems to show modulations as well. Most of the *chordogram* shows dark lines at the chords *G major*, *G minor*, *B major*, *B minor*, *D major* and *D minor*. Since all lines are equally dark, it is not really possible to indicate which of the chords is most important. However, all of the chords include the pitch class D, which again reinforces the importance of this pitch class to the track. From 115 onward, it can be seen that, aside from the key, also the chords shift to favor the pitch class C. The period between 55-70 seconds, the *chordogram* also does not favor any specific chords.
+
+The structure of the *keygram* and *chordogram* is very similar to that of the *Self-Similarity Matrices* and can be explained by what is audible in the track. The parts that center the pitch class D both contain a riff that mostly plays this tone. The part between 55-70 second mostly consists of percussion without any identifiable pitches. Lastly, the ending of the song modulates the riff on D two semitones downwards to C.
 
 
-Track 2 {data-navmenu="SSMs for my own tracks"} 
-===================================================================================
+Marit_1 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
 
-Chromagram and Cepstrogram
------------------------------------------------------------------------------------------
-### Chromagram
-
-``` {r create chromagram 1}
-"features/sven-n-1.json" |>            
-  compmus_chroma(norm = "identity") |>  
-  ggplot(aes(x = time, y = pc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:11,
-    minor_breaks = NULL,
-    labels = c(
-                "C", "C#|Db", "D", "D#|Eb",
-                "E", "F", "F#|Gb", "G",
-                "G#|Ab", "A", "A#|Bb", "B"
-              )
-  ) +
-  scale_fill_viridis_c(guide = "none") +  
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()                           
-```
-
-### Cepstrogram
-
-``` {r create cepstrogram 1}
-"features/sven-n-1.json" |>              
-  compmus_mfccs(norm = "identity") |>       
-  ggplot(aes(x = time, y = mfcc, fill = value)) + 
-  geom_raster() +
-  scale_y_continuous(
-    breaks = 0:12,
-    minor_breaks = NULL,
-  ) +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = "Coefficient Number", fill = NULL) +
-  theme_classic()   
-```
-
-### Comments
-Track one seems not-so structured in the *chroma-based matrics*, but a little more in the *timbre-based matrice*. In the *chroma-based matrice*, I think there is hardly and structure present, it seems to change the whole time. However the structure in the *timbre-based matrice* seems to be some A-B-C structure, in which the timbre changes a bit between each section. The biggest change, however, occurs between section B and C.
-
-
-Self-similarity Matrices
+Novelty functions {data-width=375}
 ---------------------------------------------------------------------------------
-### Chroma-based Matrice
-
-```{r create chroma ssm 1}
-"features/sven-n-1.json" |>          
-  compmus_chroma(norm = "chebyshev") |>        
-  compmus_self_similarity(
-    feature = pc,
-    distance = "manhattan"                  
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +      
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic()      
+### Energy-based novelty function
+``` {r energy-based novelty function Marit_1}
+"features/marit-r-1.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
 ```
 
-### Timbre-based Matrice
-
-```{r create timbre ssm 1}
-"features/sven-n-1.json" |>                  
-  compmus_mfccs(norm = "euclidean") |>       
-  compmus_self_similarity(
-    feature = mfcc,
-    distance = "euclidean"              
-  ) |>   
-  ggplot(aes(x = xtime, y = ytime, fill = d)) + 
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +        
-  labs(x = "Time (s)", y = NULL, fill = NULL) +
-  theme_classic() 
+### Spectral novelty function
+``` {r spectral novelty function Marit_1}
+"features/marit-r-1.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
 ```
 
-
-Tables class corpus
-==================================================================================
-
-Column 1 
+Tempograms {data-width=375}
 ----------------------------------------------------------------------------------
-### Compmus2025 Table
-
-```{r friendly table}
-datatable(compmus2025, rownames = FALSE, options = list(pageLength = 13))
+### Tempogram
+``` {r tempogram Marit_1}
+"features/marit-r-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
 ```
 
-> This table shows a diverse range of information about the tracks. Besides the *filenames*, it displayes the *approachability*, *arousal*, *danceability*, *engagingness*, *instrumentalness*, *tempo*, *valence* and the *names* of the students.The information in this table will be the base for my first visualisation.
-
-
-Class corpus visualisations {.storyboard}
-=====================================================================================
-### Comparison of all songs
-
-```{r}
-Comparison_gg <- ggplot(compmus2025, aes(x = arousal, y = danceability, colour = valence)) + geom_jitter(alpha = 0.6) 
-
-ggplotly(Comparison_gg)
+### Cyclic Tempogram
+``` {r cyclic tempogram Marit_1}
+"features/marit-r-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
 ```
 
-***
-This graph shows the relationship between the *danceability* and *arousal*. Especially at the beginning of the graph, it seems like there is a correlation: when *danceability* rises, so does *arousal*. Combining this with *engagingness*, which is shown by the size of the dots, it can be seen that when *danceability* and *arousal* rise, there is often also an increase in *engagingness*. 
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Marit_1 shows very clear lines around 125 BMP, 250 BPM, 375 BPM and 500 BPM. Besides this, a small part of the line at 625 BPM can be perceived. The *cyclic tempogram* shows a very clear line around 125 BPM. Besides this, there are two somewhat vaguer lines around 155 BPM and 95 BPM. If I tap along with the music, I tap around **126 BPM**, so that would be an accurate estimate. In that case, 250 BPM, 375 BPM, 500 BPM and 625 BPM would be *tempo upper harmonics*. 
 
-***
-Lastly *valence* is added to the graph as the colour of the dots. It can be seen that often *valence* and *engagingness* increase together. However, at certain moments, the relationship between *valence* and *engagingness* is less apparent. 
+In the high-level corpus features, the tempo of this track is presented as **126 BPM**, which is very accurate.
 
-### Whose song is the most danceable?
+In order to understand the lines around 95 BPM and 155 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows five of the *tempo harmonics*, which can be compared to the first five *pitch harmonics* in the overtone series: C2-C3-G3-C4-E4. Ratios that can be derived from these harmonics are:
 
-```{r}
-Dance_gg <- ggplot(compmus2025, aes(x = reorder(name, danceability), y = danceability, fill = ai)) + geom_col(alpha = 0.9) + theme(axis.text.x = element_text(angle = 45, size = 7))
+- 1 / 1 = 1 (prime)
 
-ggplotly(Dance_gg)
+- 5 / 4 = 1.25 (mediant)
+
+- 4 / 3 = 1.3333334 (subdominant)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 5 / 3 - 1.6666667 (submediant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the lowest line in the *cyclic tempogram* around 95 BPM to the tempo of the track, gives the ratio: 126/95 = 1.32631579. This is very close to the outcome of the 4/3 ratio, which justifies to call 95 BPM the **tempo subdominant**.
+
+Now relating the highest line in the *cyclic tempogram* around 155 BPM to the tempo of the track, gives the ratio: 155/126 = 1.23015873. This is very close to the outcome of the 5/4 ratio, which justifies to call 155 BPM the **tempo mediant**.
+
+Lastly the dip in tempo shown in the *cyclic tempogram* could be seen as deriving from the *upper harmonics*, since the line around 126 BPM only shows a small dip and the *upper harmonics* show greater dips each next harmonic. The small dip could be explained by the difference in the structure of the music that happens around the same time.
+
+
+
+Ke_2 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+Novelty functions {data-width=375}
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+``` {r energy-based novelty function Ke_2}
+"features/ke-w-2.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
 ```
 
-***
-In this graph, the mean of *danceability* of the two tracks of each person is shown. It can be seen that the rate of *danceability* is very diverse: Roemer made the most danceable tracks with a mean of 0.9997242 as score and Erik made the least danceable tracks with 0.1242007 as score. 
+### Spectral novelty function
+``` {r spectral novelty function Ke_2}
+"features/ke-w-2.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+Tempograms {data-width=375}
+----------------------------------------------------------------------------------
+### Tempogram
+``` {r tempogram Ke_2}
+"features/ke-w-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+``` {r cyclic tempogram Ke_2}
+"features/ke-w-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Ke_2 shows very clear lines around 95 BMP, 190 BPM, 285 BPM, 380 BPM, 475 BPM and 570 BPM. The *cyclic tempogram* shows a very clear line around 95 BPM. Besides this, there are two somewhat vaguer lines around 120 BPM and 143 BPM. If I tap along with the music, I tap around **95 BPM**, so that would be an accurate estimate. In that case, 190 BPM, 285 BPM, 380 BPM, 475 BPM and 570 BPM would be *tempo upper harmonics*. 
+
+In the high-level corpus features, the tempo of this track is presented as **95 BPM**, which is very accurate.
+
+In order to understand the lines around 120 BPM and 143 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows six of the *tempo harmonics*, which can be compared to the first six *pitch harmonics* in the overtone series: C2-C3-G3-C4-E4-G4. Ratios that can be derived from these harmonics are:
+
+- 1 / 1 = 1 (prime)
+
+- 6 / 5 = 1.2 (mediant (minor))
+
+- 5 / 4 = 1.25 (mediant (major))
+
+- 4 / 3 = 1.3333334 (subdominant)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 5 / 3 - 1.6666667 (submediant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the middle line in the *cyclic tempogram* around 120 BPM to the tempo of the track, gives the ratio: 120/95 = 1.26315789. This is very close to the outcome of the 5/4 ratio, which justifies to call 120 BPM the **tempo mediant**.
+
+Now relating the highest line in the *cyclic tempogram* around 143 BPM to the tempo of the track, gives the ratio: 143/95 = 1.50526316. This is very close to the outcome of the 3/2 ratio, which justifies to call 143 BPM the **tempo dominant**.
 
 
-Conclusion and Discussion
+Sven_2 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+Novelty functions {data-width=375}
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+``` {r energy-based novelty function Sven_2}
+"features/sven-n-2.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+``` {r spectral novelty function Sven_2}
+"features/sven-n-2.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+Tempograms {data-width=375}
+----------------------------------------------------------------------------------
+### Tempogram
+``` {r tempogram Sven_2}
+"features/sven-n-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+``` {r cyclic tempogram Sven_2}
+"features/sven-n-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Sven_2 shows very clear lines around 180 BMP, 360 BPM and 540 BPM. The *cyclic tempogram* shows a very clear line around 90 BPM. Besides this, there is a somewhat vaguer line around 135 BPM. If I tap along with the music, I tap around **90 BPM**, so that would be an accurate estimate. In that case, 180 BPM, 360 BPM and 540 BPM would be *tempo upper harmonics*.
+
+In the high-level corpus features, the tempo of this track is presented as **90 BPM**, which is very accurate.
+
+In order to understand the line around 135 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows three of the *tempo harmonics*, which can be compared to the first three *pitch harmonics* in the overtone series: C2-C3-G3. Ratios that can be derived from these harmonics are:
+
+- 1 / 1 = 1 (prime)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the upper line in the *cyclic tempogram* around 135 BPM to the tempo of the track, gives the ratio: 135/90 = 1.5. This is equal to the outcome of the 3/2 ratio, which justifies to call 135 BPM the **tempo dominant**.
+
+Lastly the dip in tempo shown in the *cyclic tempogram* could be seen as deriving from the *upper harmonics*, since the line around 180 BPM only shows a small dip and the *upper harmonics* show greater dips with each next harmonic. The small dip could be explained by the difference in the structure of the music that happens around the same time.
+
+
+Sven_1 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+Novelty functions {data-width=375}
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+``` {r energy-based novelty function Sven_1}
+"features/sven-n-1.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+``` {r spectral novelty function Sven_1}
+"features/sven-n-1.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+Tempograms {data-width=375}
+----------------------------------------------------------------------------------
+### Tempogram
+``` {r tempogram Sven_1}
+"features/sven-n-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+``` {r cyclic tempogram Sven_1}
+"features/sven-n-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Sven_1 shows very clear lines around 160 BMP, 320 BPM and 480 BPM. The *cyclic tempogram* shows very clear lines around 80 BPM and 160 BPM. Besides this, there is a somewhat vaguer line around 120 BPM. If I tap along with the music, I tap around **160 BPM**, so that would be an accurate estimate. In that case, 330 BPM and 500 BPM would be *tempo upper harmonics* and 80 BPM would be a *tempo subharmonic*. 120 BPM could be seen as a *tempo lower fourth* in relation to 160 BPM.
+
+In the high-level corpus features, the tempo of this track is presented as **81 BPM**, which is accurate. I tapped along at 160 BPM, but 81 BPM (as it's lower octave) makes sense as well.
+
+In order to understand the lines around 80 BPM and 120 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows three of the *tempo harmonics*, which can be compared to the first three *pitch harmonics* in the overtone series: C2-C3-G3. Ratios that can be derived from these harmonics are:
+
+- 1 / 1 = 1 (prime)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the middle line in the *cyclic tempogram* around 120 BPM to the tempo of the track, gives the ratio: 120/80 = 1.5. This is equal to the outcome of the 3/2 ratio, which justifies to call 120 BPM the **tempo dominant**.
+
+Now relating the lowest line in the *cyclic tempogram* around 80 BPM to the tempo of the track, gives the ratio: 160/80 = 2. This is equal to the outcome of the 2/1 ratio, which justifies to call 80 BPM the **(lower) tempo octave**.
+
+Lastly the tempo shown in the *(cyclic) tempogram* does not seem to be very steady. There is a lot of fluctuation, which seems to partly coincide with changes in the musical structure. At some places, for example around 60 seconds, the *tempogram* has vertical lines, which shows that the tempo at such places is hard to define. At such places, there is some more silence in the track, which gives uncertainty in where to identify the beat.
+
+
+Roemer_1 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+Novelty functions {data-width=375}
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+``` {r energy-based novelty function Roemer_1}
+"features/roemer-i-1.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+``` {r spectral novelty function Roemer_1}
+"features/roemer-i-1.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+Tempograms {data-width=375}
+----------------------------------------------------------------------------------
+### Tempogram
+``` {r tempogram Roemer_1}
+"features/roemer-i-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+``` {r cyclic tempogram Roemer_1}
+"features/roemer-i-1.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Roemer_1 shows very clear lines around 100 BMP, 200 BPM, 300 BPM, 400 BPM, 500 BPM and 600 BPM. The *cyclic tempogram* shows a very clear line around 100 BPM. Besides this, there are two somewhat vaguer lines around 125 BPM and 150 BPM. If I tap along with the music, I tap around **100 BPM**, so that would be an accurate estimate. In that case, 200 BPM, 300 BPM, 400 BPM, 500 BPM and 600 BPM would be *tempo upper harmonics*. 
+
+In the high-level corpus features, the tempo of this track is presented as **99 BPM**, which is pretty accurate.
+
+In order to understand the lines around 125 BPM and 150 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows six of the *tempo harmonics*, which can be compared to the first six *pitch harmonics* in the overtone series: C2-C3-G3-C4-E4-G4. Ratios that can be derived from these harmonics are:
+
+- 1 / 1 = 1 (prime)
+
+- 6 / 5 = 1.2 (mediant (minor))
+
+- 5 / 4 = 1.25 (mediant (major))
+
+- 4 / 3 = 1.3333334 (subdominant)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 5 / 3 - 1.6666667 (submediant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the middle line in the *cyclic tempogram* around 125 BPM to the tempo of the track, gives the ratio: 125/100 = 1.25. This is equal to the outcome of the 5/4 ratio, which justifies to call 125 BPM the **tempo mediant**.
+
+Now relating the highest line in the *cyclic tempogram* around 150 BPM to the tempo of the track, gives the ratio: 150/100 = 1.5. This is equal to the outcome of the 3/2 ratio, which justifies to call 150 BPM the **tempo dominant**.
+
+Lastly, there are vague lines surrounding each line in the *(cyclic) tempogram*. The percussion in the track is very audible, which might excite high *tempo harmonics* (> 600 BPM), so that they appear in the *tempogram*. Even though these *tempo harmonics* might only be shown at a higher BPM in the *tempogram*, they are vaguely apparent already in this part of it.
+
+
+Roemer_2 {data-navmenu="Novelty Functions and Tempograms"}
+=================================================================================
+Novelty functions {data-width=375}
+---------------------------------------------------------------------------------
+### Energy-based novelty function
+``` {r energy-based novelty function Roemer_2}
+"features/roemer-i-2.json" |>
+  compmus_energy_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Energy Novelty")
+```
+
+### Spectral novelty function
+``` {r spectral novelty function Roemer_2}
+"features/roemer-i-2.json" |>
+  compmus_spectral_novelty() |> 
+  ggplot(aes(t, novelty)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Spectral Novelty")
+```
+
+Tempograms {data-width=375}
+----------------------------------------------------------------------------------
+### Tempogram
+``` {r tempogram Roemer_2}
+"features/roemer-i-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Cyclic Tempogram
+``` {r cyclic tempogram Roemer_2}
+"features/roemer-i-2.json" |>
+  compmus_tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+Comments {data-width=250}
+----------------------------------------------------------------------------------
+### Comments
+The *tempogram* of Roemer_2 shows very clear lines around 120 BMP, 240 BPM, 360 BPM and 480 BPM. Besides this, the line which would appear around 600 BPM (being the upper limit of the graph) is not yet fully visible. The *cyclic tempogram* shows a very clear line around 120 BPM. Besides this, there are two somewhat vaguer lines around 93 BPM and 155 BPM. If I tap along with the music, I tap around **123 BPM**, so that would be an accurate estimate. In that case, 240 BPM, 360 BPM and 480 BPM would be *tempo upper harmonics*. 
+
+In the high-level corpus features, the tempo of this track is presented as **63 BPM**, which is accurate. I tapped along at 123 BPM, but 63 BPM (as it's lower octave) makes sense as well.
+
+In order to understand the lines around 93 BPM and 165 BPM in the *cyclic tempogram*, I will take a look at the ratios described in the JUST intonation. The *tempogram* shows five of the *tempo harmonics*, which can be compared to the first five *pitch harmonics* in the overtone series: C2-C3-G3-C4-E4. Ratios that can be derived from these harmonics are:
+
+- 1 / 1 = 1 (prime)
+
+- 5 / 4 = 1.25 (mediant)
+
+- 4 / 3 = 1.3333334 (subdominant)
+
+- 3 / 2 = 1.5 (dominant)
+
+- 5 / 3 = 1.6666667 (submediant)
+
+- 2 / 1 = 2 (octave)
+
+These are the only possible types of *tempo intervals* in this situation, since other ratios cannot be made with the given harmonics.
+
+When relating the lowest line in the *cyclic tempogram* around 93 BPM to the tempo of the track, gives the ratio: 123/93 = 1.32258065. This is very close to the outcome of the 4/3 ratio, which justifies to call 93 BPM the **tempo subdominant**.
+
+Now relating the highest line in the *cyclic tempogram* around 155 BPM to the tempo of the track, gives the ratio: 155/123 = 1.2601626. This is very close to the outcome of the 5/4 ratio, which justifies to call 155 BPM the **tempo mediant**.
+
+Lastly, there are vague vertical lines around 60-70 seconds in the *(cyclic) tempogram*. In this small section, the high-hat stops and is not yet replaced by some another musical element that indicates each beat. The lines can thus be related to musical structure (the same section is highlighted in the *Self-Similarity Matrices*). The *(cyclic) tempogram* is still able to identify the tempo, but the vertical lines surrounding the section show some kind of ambiguity. 
+
+
+Clustering and Heatmap {data-navmenu="Clustering and Classification"}
+==============================================================================
+```{r filter 12 danceability tracks for clustering and heatmap, include=FALSE}
+Compmus2025Dance <- compmus2025 %>%
+  arrange(danceability) %>%
+  filter(name == "Marit_1" | name == "Ke_2" | name == "Erik_2" | name == "Mees_2" | name == "Sven_2" | name == "Ruishan_1" | name == "Cecilia_2" | name == "Sven_1" | name == "Ellen_1" | name == "Popke_2" | name == "Roemer_1" | name == "Roemer_2") %>% 
+  rename("Arousal" = arousal, "Danceability" = danceability, "Instrumentalness" = instrumentalness, "Tempo" = tempo, "Valence" = valence, "Approachability" = approachability, "Engagingness" = engagingness, "AI" = ai_int)
+```
+
+```{r pre-processing for clustering and heatmap, include=FALSE}
+cluster_juice <-
+  recipe(
+    name ~
+      Arousal +
+      Danceability +
+      Instrumentalness +
+      Tempo +
+      Valence +
+      Approachability +
+      Engagingness +
+      AI,
+    data = Compmus2025Dance
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors()) |> 
+  prep(Compmus2025Dance) |>
+  juice() |>
+  column_to_rownames("name")
+```
+
+```{r computing distances for clustering and heatmap, include=FALSE}
+compmus_dist <- dist(cluster_juice, method = "euclidean")
+```
+
+
+Clustering and Heatmap {data-width=750, .tabset}
+-------------------------------------------------------------------
+### Hierarchical Clustering
+
+```{r hierarchical clustering of 12 tracks}
+compmus_dist |> 
+  hclust(method = "average") |> 
+  dendro_data() |>
+  ggdendrogram()
+```
+
+### Heatmap
+```{r heatmap of 12 tracks}
+heatmaply(
+  cluster_juice,
+  hclustfun = hclust,
+  hclust_method = "average",
+  dist_method = "euclidean"
+)
+```
+
+Comments {data-width=250, .tabset}
+-------------------------------------------------------------------
+### Comments: Hierarchical Clustering
+This graph shows which tracks are clustered togehter based on the Essentia-features. To create a slightly bigger graph, I added six songs, instead of only using the six I have been working with so far. What is shown are the three tracks with the lowest *danceability* score, the three tracks with the highest *danceability* score, my own tracks and two tracks that surround each of my own tracks. This visualisation shows that tracks that would be clustered together based only on *danceability* are not necessarily as close together when taking all different features into account.
+
+### Heatmap
+This *heatmap* shows how the tracks relate to each other based on the Essentia-features. To create a slightly bigger graph, I added six songs, instead of only using the six I have been working with so far. What is shown are the three tracks with the lowest *danceability* score, the three tracks with the highest *danceability* score, my own tracks and two tracks that surround each of my own tracks. This visualisation shows what features are the basis for clustering the tracks together and how the features can be clustered together.
+
+
+
+Knn Classification {data-navmenu="Clustering and Classification"}
+=========================================================================================
+Graphs
+-------------------------------------------------------------------------------
+```{r filtering NAs out of AI column and mutating dance-column, include=FALSE}
+compmus2025_filtered <- 
+  compmus2025 |> filter(!is.na(ai_int)) |> 
+  mutate(dance = factor(if_else(dance, "Danceable", "Not-Danceable")))
+```
+
+```{r pre-processing for knn and random forest models, include=FALSE}
+classification_recipe <-
+  recipe(
+    dance ~
+      approachability +
+      arousal +
+      engagingness +
+      instrumentalness +
+      tempo +
+      valence +
+      ai_int,
+    data = compmus2025_filtered
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors())
+```
+
+```{r cross-validation for knn and random forest models, include=FALSE}
+compmus_cv <- compmus2025_filtered |> vfold_cv(8)
+```
+
+```{r creating knn model basis, include=FALSE}
+knn_model <-
+  nearest_neighbor(neighbors = 1) |>
+  set_mode("classification") |> 
+  set_engine("kknn")
+classification_knn <- 
+  workflow() |> 
+  add_recipe(classification_recipe) |> 
+  add_model(knn_model) |> 
+  fit_resamples(compmus_cv, control = control_resamples(save_pred = TRUE))
+```
+
+### Mosaic Matrix
+
+```{r mosaic plot knn model}
+set.seed(5)
+classification_knn |> get_conf_mat() |> autoplot(type = "mosaic")
+```
+
+### Heatmap Matrix
+```{r heatmap plot knn model}
+set.seed(5)
+classification_knn |> get_conf_mat() |> autoplot(type = "heatmap")
+```
+
+Tables and comments
+----------------------------------------------------------------------------
+
+### Knn Classification
+```{r classification table knn model}
+set.seed(5)
+classification_knn |> get_conf_mat()
+```
+
+### Precision and Recall
+```{r precision & recall table knn model}
+set.seed(5)
+classification_knn |> get_pr()
+```
+
+### Comments
+These matrices show how well the model works. It can be seen that there are 12 *True Positives*, 15 *False Positives*, 10 *False Negatives* and 53 *True Negatives*. The model has an accuracy of 72.2%. There are not many songs that are labeled as *danceable*, which causes the model to have lower precision and recall scores on this class. Because it has many examples of *non-danceable* songs, it is easier to identify this class in a training set.
+
+
+Decision-tree Classification {data-navmenu="Clustering and Classification"}
+========================================================================
+
+```{r creating random forest model basis, include=FALSE}
+forest_model <-
+  rand_forest() |>
+  set_mode("classification") |> 
+  set_engine("ranger", importance = "impurity")
+indie_forest <- 
+  workflow() |> 
+  add_recipe(classification_recipe) |> 
+  add_model(forest_model) |> 
+  fit_resamples(
+    compmus_cv, 
+    control = control_resamples(save_pred = TRUE)
+  )
+```
+
+Variable importance 
+--------------------------------------------------------------------
+### Variable Importance
+```{r importance of features model for predicting danceability}
+workflow() |> 
+  add_recipe(classification_recipe) |> 
+  add_model(forest_model) |> 
+  fit(compmus2025_filtered) |> 
+  pluck("fit", "fit", "fit") |>
+  ranger::importance() |> 
+  enframe() |> 
+  mutate(name = fct_reorder(name, value)) |> 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  coord_flip() +
+  theme_minimal() +
+  labs(x = NULL, y = "Importance")
+```
+
+### Heatmap Matrix
+```{r heatmap plot random forest model}
+set.seed(7)
+indie_forest |> get_conf_mat() |> autoplot(type = "heatmap")
+```
+
+Further information
+------------------------------------------------------------------------------
+### Precision and Recall
+```{r precision & recall table random forestt model}
+set.seed(7)
+indie_forest |> get_pr()
+```
+
+### Comments
+It can be seen that *arousal* is the most influential on the model's prediction whether a track is made by AI or not. Besides this, matrix shows that there are 4 *True Positives*, 6 *False Positives*, 18 *False Negatives* and 62 *True Negatives*. The model has an accuracy of 73.3%. There are not many songs that are labeled as *danceable*, which causes the model to have lower precision and recall scores on this class. Because it has many examples of *non-danceable* songs, it is easier to identify this class in a training set.
+
+
+Final Plot {data-navmenu="Clustering and Classification"}
+====================================================================================
+Final plot {data-width=750}
+----------------------------------------------------------------------------------
+### Variables which are of great importance for predicting danceability
+```{r new plot}
+compmus2025_filtered |>
+  ggplot(aes(x = arousal, y = engagingness, colour = dance, size = approachability)) +
+  geom_point(alpha = 0.8) +
+  labs(
+    x = "Arousal",
+    y = "Engagingness",
+    size = "Approachability",
+    colour = "Danceable?"
+  )
+```
+
+
+Comments {data-width=250}
+-----------------------------------------------------------------------------------
+### Comments
+This plot shows the relation of *arousal*, *engagingness* and *approachability* to *danceability*. These three features turned out to be most important for the model to decide whether a song is *danceable* or not. Interestingly, in this graph *danceable* songs are spread through the *non-danceable* songs. There does not seem to be a very clear seperation of both based on these features.
+
+
+Conclusion
 ==================================================================
-### Own tracks in compmus2025
+### Conclusion
+To end this dashboard, I will give a short conclusion and summary of what is shown throughout the pages.
 
-**AI Prompts:**
-For the first track, I used https://www.jenmusic.ai to create it and provided it with the following prompt: “I would like a 6/8 meter, often stressing this meter, but at certain moments provided with hemiolas. It should be a ballad, structured as: intro - verse - pre-chorus - chorus - break - verse - chorus - chorus - outro. As instruments, it should use a piano, soft percussion, a string quartet and some woodwinds. The piano provides a progression consisting of chords with additional notes (such as 7ths, 9ths, 11ths, 13ths) and sus-chords. The soft percussion starts minimal, but gets more extensive in the choruses. The strings play throughout the whole song, but the viola mainly provides the melody. The woodwinds are only used to emphasize the pre-chorus and the chorus. The ballad should be in D major as key and has a slow to medium tempo. The reverb should be as if the piece is played in a small hall.” I tried to be specific in many aspects to see if the AI tool would create something that would meet my ‘demands’. Even though it did not in many ways, it picked up on some features of the prompt.
+**Class Corpus Table**
+This table shows all the tracks present in the class corpus and their corresponding Essentia-features. I modified the table slightly (I added *name*, *dance* and *ai_int*) for later parts of my analysis.
 
-For the second track, I used https://www.stableaudio.com to create it and provided it with the following prompt: “soft ballad, 6/8, D major, slow to medium tempo, piano, soft percussion gets more extensive over-time, string quartet, melody played by viola, soft woodwinds, triad chords played by piano, added note chords played by piano, hemiolas, small hall reverb.” This tool specified that it would work better when using short descriptions, so I tried to recreate the prompt I used for track one as much as I could with this in mind. Some ‘demands’ are now less elaborate or not mentioned at all. Again, it does seem to leave out some ‘demands’, but many others are to some extent met.
+**First Class Corpus Visualisations:**
+Here I have shown a few visualisations that introduce the topic of my dashboard: *danceability*! I showed a few features which I thought were closely related to *danceability*, all tracks in the class corpus ordered by their *danceability* and the selection of tracks that I have analyzed throughout this dashboard.
+
+**Self-Similarity Matrices based on Chromagrams and Cepstrograms**
+In this section, I have shown *Chromagrams*, *Cepstrograms* and *Self-Similarity Matrices* of the six tracks. I have analysed the tracks based on their **structure**, which was easier for some of them than for others. I expected tracks with a clear structure to be the most *danceable*. However, the least *danceable* ones were pretty structured, especially Ke_2. Contrasting Roemer_1 did not seem very structured, but is still very *danceable*. Of my own tracks, Sven_1 is not really structured and Sven_2 has a slightly clearer structure. It does not seem like structure is closely related to *danceability*.
+
+**Keygrams and Chordograms**
+In this section, I have shown *Keygrams* and *Chordograms* of the six tracks. I have analysed the songs based on their **tonal features** and did not expect a clear tonal basis to be very relevant to *danceability*. This seems to be true, since some of the least *danceable* tracks show a clear tonal basis (for example Sven_1), but some also show a less clear tonal basis (for example Marit_1). The same thing could be said about the *danceable* tracks, since Roemer_1 does not have a clear tonal basis and Roemer_2 has a somewhat clearer tonal basis.
+
+**Novelty Functions and Tempograms**
+In this section, I have shown *Novelty Functions* and *Tempograms* of the six tracks. I have analysed the song based on their **tempo** and expected a tempo around 125 BPM to be the most *danceable*. This does not seem to be true, since Marit_1 is the least *danceable* track, but has a tempo of 126 BPM. Although the most *danceable* track (Roemer_2) has a BPM of 123 BPM, the second most *danceable* track (Roemer_1) has a BPM of 100. My own tracks (Sven_1 and Sven_2) have very different BPMs of 160 and 95 respectively.
+
+**Clustering and Classification** 
+In this section, I have shown *Hierarchical Clustering* and a *Heatmap* in relation to twelve tracks out of the class corpus. Interestingly, my own tracks are clustered together on the lowest level. Even though they sound very distinct to me, the prompts I used to create them did apparently make the tracks similar somehow. None of the other six tracks I have analysed are clustered together on the lowest level. Looking at the *heatmap*, the *valance* and *instrumentalness* of my own tracks are almost the same.
+
+Besides this, I have created models to predict whether a track is *danceable or not* in this section. Although the models did well on finding *true negatives*, *true positives* tended to be harder to find. This might be, because the class corpus contained only a little amount of *danceable* tracks (*danceability* >= 0.7) compared to *non-danceable* tracks. 
+
+Lastly, the *decision-tree* model showed which features are most important to decide whether a track is *danceable* or not. The three most important features (*arousal*, *approachability* and *engagingness*) were then used to create the final plot of this dashboard, in which these features are related to the *danceability* of each track.
 
 ***
-**Own tracks:**
-My own tracks are low in *danceability* and *arousal*, but in the middle on the scale of *engagingness* and *valence*. Compared to all the other tracks, my tracks are in the lower spectrum of each category. I find it interesting how Essentia labelled the *tempo* of my tracks as 112 and 124 respectively, when I asked the AI models to generate slow (to medium) tempo music. 
 
-
-
-
-
-
-
-
-
+Thank you for taking the time to visit and read my dashboard :)
